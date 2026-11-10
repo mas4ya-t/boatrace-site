@@ -2,56 +2,17 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- 検索除け: 検索結果に載せない・リンクをたどらない・キャッシュを残さない。画面のページを足すときも全部に入れる -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 検索除け: 全ページに入れる -->
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="googlebot" content="noindex, nofollow, noarchive">
-<title>ボートレース予想</title>
-<style>
-  :root { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --warn-bg: #fff8c5; --warn-border: #d4a72c; --link: #0969da; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --warn-bg: #2e2a12; --warn-border: #9e6a03; --link: #4493f8; }
-  }
-  body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; line-height: 1.7; }
-  main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
-  h1 { font-size: 1.5rem; margin: 0 0 8px; }
-  .muted { color: var(--muted); }
-  .warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 12px 16px; margin: 24px 0; }
-  a { color: var(--link); }
-  ul { padding-left: 1.2em; }
-</style>
+<meta name="color-scheme" content="light dark">
+<title>レース一覧 — ボートレース予想</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
 </head>
-<body>
-<main>
-  <h1>ボートレース予想</h1>
-  <p class="muted">画面は準備中です。いまは予想と結果のデータ（JSON）だけを公開しています。</p>
-
-  <div class="warn" id="notice">
-    <strong>この予想で買っても儲かりません。</strong><br>
-    予想の買い目（picks）の回収率は、確定オッズでの試算で 89〜95%（100% 未満）です。
-    予想は「レースがどう転びそうか」の目安として見てください。
-  </div>
-
-  <ul>
-    <li><a href="data/index.json">data/index.json</a> — 日付と集計の一覧</li>
-    <li id="latest"></li>
-    <li><a href="data/stats/summary.json">data/stats/summary.json</a> — 予想の成績</li>
-  </ul>
-</main>
-<script>
-  // 注意書きは summary.json の note を優先して出す (取れなければ上の文のまま)
-  fetch("data/stats/summary.json").then(r => r.json()).then(s => {
-    if (s.note) document.getElementById("notice").innerHTML = "<strong>この予想で買っても儲かりません。</strong><br>" + s.note;
-  }).catch(() => {});
-  fetch("data/index.json").then(r => r.json()).then(ix => {
-    if (ix.latest_date) {
-      const a = document.createElement("a");
-      a.href = `data/races/${ix.latest_date}.json`;
-      a.textContent = `data/races/${ix.latest_date}.json`;
-      const li = document.getElementById("latest");
-      li.append(a, ` — ${ix.latest_date} のレース一覧`);
-    }
-  }).catch(() => {});
-</script>
+<body data-page="index">
+<main><div class="empty">読み込み中…</div></main>
+<noscript><div class="empty">表示には JavaScript が必要です</div></noscript>
 </body>
 </html>

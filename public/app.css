@@ -1,0 +1,258 @@
+/* ボートレース予想 — 共通スタイル。スマホ優先 (320px〜)、PC では中央寄せ */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --faint: #8c959f;
+  --line: #d1d9e0;
+  --card: #f6f8fa;
+  --accent: #0969da;
+  --hit: #1a7f37;
+  --hit-bg: #dafbe1;
+  --miss: #8c959f;
+  --warn-fg: #4d2d00;
+  --warn-bg: #fff8c5;
+  --warn-line: #d4a72c;
+  --bar: #0969da;
+  --bar2: #8250df;
+  --bar-bg: #e6eaef;
+  --st-scheduled: #8c959f;
+  --st-predicted: #0969da;
+  --st-closed: #bc4c00;
+  --st-finished: #1a7f37;
+  --st-cancelled: #cf222e;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --faint: #6e7681;
+    --line: #30363d;
+    --card: #161b22;
+    --accent: #4493f8;
+    --hit: #3fb950;
+    --hit-bg: #12261e;
+    --miss: #6e7681;
+    --warn-fg: #f2cc60;
+    --warn-bg: #2b2111;
+    --warn-line: #9e6a03;
+    --bar: #4493f8;
+    --bar2: #ab7df8;
+    --bar-bg: #262c36;
+    --st-scheduled: #6e7681;
+    --st-predicted: #4493f8;
+    --st-closed: #db6d28;
+    --st-finished: #3fb950;
+    --st-cancelled: #f85149;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 { font-size: 1.3rem; margin: 0; line-height: 1.3; }
+h2 { font-size: 1.05rem; margin: 24px 0 8px; }
+h3 { font-size: .95rem; margin: 12px 0 4px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.small { font-size: .85em; }
+
+/* ─── 枠 ─── */
+.site-header {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.site-header .inner {
+  max-width: 760px; margin: 0 auto; padding: 8px 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.site-header .brand { font-weight: 700; color: var(--fg); white-space: nowrap; }
+.site-header nav { margin-left: auto; display: flex; gap: 4px; }
+.site-header nav a {
+  padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap;
+}
+.site-header nav a[aria-current="page"] { background: var(--card); color: var(--fg); font-weight: 600; }
+main { max-width: 760px; margin: 0 auto; padding: 12px 12px 32px; }
+body[data-page="index"] main { padding-bottom: 96px; }   /* 下に固定した日付バーの分 */
+
+/* ─── 注意書き (picks の直下に読める大きさで) ─── */
+.notice {
+  background: var(--warn-bg); color: var(--warn-fg);
+  border: 1px solid var(--warn-line); border-radius: 8px;
+  padding: 10px 12px; margin: 12px 0; font-size: .92rem; line-height: 1.65;
+}
+.notice strong { display: block; margin-bottom: 2px; }
+
+.empty {
+  border: 1px dashed var(--line); border-radius: 8px;
+  padding: 24px 12px; text-align: center; color: var(--muted); margin: 16px 0;
+}
+
+/* ─── バッジ ─── */
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font-size: .78rem; line-height: 1.6; white-space: nowrap; border: 1px solid currentColor;
+}
+.st-scheduled { color: var(--st-scheduled); }
+.st-predicted { color: var(--st-predicted); }
+.st-closed { color: var(--st-closed); }
+.st-finished { color: var(--st-finished); }
+.st-cancelled { color: var(--st-cancelled); }
+.badge.pick { color: #fff; background: #bf3989; border-color: #bf3989; }
+.badge.plain { color: var(--muted); }
+
+/* 的中マーク: true = 的中、false = 外れ、null = 結果待ち (区別する) */
+.mark { font-weight: 700; white-space: nowrap; }
+.mark.hit { color: var(--hit); }
+.mark.miss { color: var(--miss); font-weight: 400; }
+.mark.pending { color: var(--faint); font-weight: 400; font-size: .85em; }
+tr.is-hit td { background: var(--hit-bg); }
+
+/* ─── 艇番の色 (1白 2黒 3赤 4青 5黄 6緑) ─── */
+.boat {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 4px; flex: none;
+  font: 700 13px/1 var(--mono); border: 1px solid transparent;
+}
+.b1 { background: #ffffff; color: #111; border-color: #8c959f; }
+.b2 { background: #1f1f1f; color: #fff; border-color: #6e7681; }
+.b3 { background: #e60012; color: #fff; }
+.b4 { background: #0068b7; color: #fff; }
+.b5 { background: #ffe100; color: #111; }
+.b6 { background: #00a040; color: #fff; }
+.boats { display: inline-flex; gap: 3px; flex-wrap: wrap; vertical-align: middle; }
+
+/* ─── バー ─── */
+.bar { display: block; height: 6px; background: var(--bar-bg); border-radius: 3px; overflow: hidden; min-width: 24px; }
+.bar > i { display: block; height: 100%; background: var(--bar); border-radius: 3px; }
+.bar.alt > i { background: var(--bar2); }
+
+/* ─── トップ: フィルタ ─── */
+.day-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: thin; }
+.chip {
+  flex: none; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--fg); font: inherit; font-size: .88rem; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* ─── トップ: レースカード ─── */
+.race-card {
+  display: block; color: inherit; border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; margin: 10px 0; background: var(--bg);
+}
+.race-card:hover { text-decoration: none; border-color: var(--accent); }
+.race-card.is-cancelled { opacity: .6; }
+.race-card .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.race-card .title { font-weight: 700; }
+.race-card .time { color: var(--muted); }
+.race-card .head .right { margin-left: auto; display: flex; gap: 6px; }
+.race-card .summary { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: .88rem; margin: 6px 0 4px; color: var(--muted); }
+.race-card .summary b { color: var(--fg); font-weight: 600; }
+.entries { display: grid; gap: 3px; margin-top: 4px; }
+.entry-row {
+  display: grid; grid-template-columns: 22px minmax(5.5em, 1fr) 2em minmax(28px, 72px) 3.3em 2.3em;
+  align-items: center; gap: 5px; font-size: .88rem;
+}
+.entry-row.simple { grid-template-columns: 22px minmax(0, 1fr) 2em; }   /* 予想前: 確率・着順の欄は出さない */
+.entry-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-row .cls { color: var(--muted); font-size: .8rem; }
+.entry-row .pct { text-align: right; }
+.entry-row .arr { text-align: right; font-weight: 700; }
+.entry-row.is-win .name { font-weight: 700; }
+.result-line { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: .9rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ─── 日付バー (画面下に固定、親指で押しやすく) ─── */
+.datebar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--bg); border-top: 1px solid var(--line);
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+}
+.datebar .inner { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
+.datebar button, .datebar select {
+  min-height: 44px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); color: var(--fg); font: inherit; font-size: .95rem; width: 100%;
+}
+.datebar button:disabled { opacity: .4; }
+.datebar select { text-align: center; padding: 0 4px; }
+
+/* ─── 詳細 ─── */
+.back { display: inline-block; margin: 4px 0 8px; }
+.race-head { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.race-head .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.weather { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: .9rem; color: var(--muted); }
+.wind-arrow { display: inline-block; width: 1.2em; text-align: center; font-weight: 700; color: var(--fg); }
+.prob-list { display: grid; gap: 6px; }
+.prob-row { display: grid; grid-template-columns: 8.5em minmax(0, 1fr) 3.6em 3.4em; gap: 8px; align-items: center; font-size: .92rem; }
+.prob-row .pct { text-align: right; }
+
+.entry-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+.entry-card .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.entry-card .top .name { font-weight: 700; font-size: 1.02rem; }
+.entry-card .top .arrival { margin-left: auto; font-weight: 700; font-size: 1.05rem; }
+.kv-bars { display: grid; grid-template-columns: 3.6em minmax(0, 1fr) 3.6em; gap: 4px 8px; align-items: center; margin: 8px 0 4px; font-size: .88rem; }
+.kv-bars .pct { text-align: right; }
+.facts { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: .88rem; color: var(--muted); }
+.facts b { color: var(--fg); font-weight: 600; }
+.section-label { font-size: .75rem; color: var(--muted); margin: 10px 0 2px; letter-spacing: .05em; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; font-size: .88rem; }
+.grid2 .k { color: var(--muted); }
+.low { opacity: .5; }
+details.own { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+details.own > summary { cursor: pointer; color: var(--accent); font-size: .88rem; padding: 4px 0; }
+details.own[open] > summary { margin-bottom: 4px; }
+
+/* ─── 表 (横に溢れたら表だけスクロール) ─── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; white-space: nowrap; }
+th { background: var(--card); font-weight: 600; font-size: .8rem; color: var(--muted); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+td.wrap { white-space: normal; min-width: 12em; }
+.ci .n { display: block; font-size: .78rem; color: var(--muted); }
+
+/* ─── 成績 ─── */
+details.stats-block { border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; margin: 12px 0; }
+details.stats-block > summary { cursor: pointer; padding: 10px 0; font-weight: 700; }
+details.stats-block[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.stats-meta { font-size: .88rem; color: var(--muted); }
+.stats-meta p { margin: 4px 0; }
+ul.findings { padding-left: 1.2em; margin: 8px 0; font-size: .92rem; }
+.superseded { border-left: 3px solid var(--st-closed); padding: 4px 10px; margin: 8px 0; font-size: .88rem; color: var(--muted); }
+.superseded b { color: var(--st-closed); }
+.row-kinds { font-size: .88rem; margin: 6px 0 0; padding-left: 1.2em; }
+.chart { width: 100%; height: auto; margin: 8px 0; }
+.chart text { fill: var(--muted); font: 11px var(--mono); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 3px; vertical-align: middle; margin-right: 4px; }
+
+.commentary { border-left: 3px solid var(--accent); padding: 4px 12px; white-space: pre-wrap; }
+footer.site-footer { max-width: 760px; margin: 0 auto; padding: 16px 12px 24px; color: var(--faint); font-size: .8rem; }
+.badge.pick { padding: 0 6px; }
+th, td { padding: 6px 7px; }
+@media (max-width: 360px) {
+  table { font-size: .8rem; }
+  th, td { padding: 5px 5px; }
+}
+
+/* 成績の summary (1行ずつカード) */
+.sum-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.sum-card.live { border-color: var(--accent); border-width: 2px; }
+.sum-card .sum-label { font-weight: 700; font-size: .92rem; }
+.sum-card .big { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
+.chart { max-width: 560px; }

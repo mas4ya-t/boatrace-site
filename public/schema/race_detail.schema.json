@@ -524,6 +524,19 @@
      "title": "Stake",
      "type": "integer"
     },
+    "judged_at_min": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "判定に使ったオッズを取った時点 (締切の何分前か)",
+     "title": "Judged At Min"
+    },
     "hit": {
      "anyOf": [
       {
