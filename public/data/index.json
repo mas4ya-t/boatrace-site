@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "updated_at": "2026-11-10T13:49:24+09:00",
+ "latest_date": null,
+ "dates": [],
+ "stats_files": [
+  "summary",
+  "terrain",
+  "terrain_groups",
+  "grid",
+  "strata",
+  "holdout"
+ ]
+}

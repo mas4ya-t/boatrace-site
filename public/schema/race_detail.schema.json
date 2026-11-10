@@ -1,0 +1,1076 @@
+{
+ "$defs": {
+  "Entry": {
+   "additionalProperties": false,
+   "properties": {
+    "course": {
+     "description": "艇番 (枠番)。実際の進入コースではない",
+     "title": "Course",
+     "type": "integer"
+    },
+    "player_no": {
+     "title": "Player No",
+     "type": "integer"
+    },
+    "player_name": {
+     "title": "Player Name",
+     "type": "string"
+    },
+    "class": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Class"
+    },
+    "age": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Age"
+    },
+    "weight": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Weight"
+    },
+    "official": {
+     "$ref": "#/$defs/Official"
+    },
+    "stats": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/EntryStats"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "予想前は null"
+    },
+    "exhibition": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/Exhibition"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "予想前は null"
+    },
+    "p_win": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "1着の確率。予想前は null",
+     "title": "P Win"
+    },
+    "p_top3": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "3着以内の確率。予想前は null",
+     "title": "P Top3"
+    },
+    "hit_win": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "1着だったか。finished まで null",
+     "title": "Hit Win"
+    },
+    "hit_top3": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "3着以内だったか。finished まで null",
+     "title": "Hit Top3"
+    },
+    "arrival": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "着順 (1〜6)。F・欠場などと finished 前は null",
+     "title": "Arrival"
+    },
+    "arrival_code": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "着順が数字でないときのコード (F / L / 欠 / 失 など)",
+     "title": "Arrival Code"
+    }
+   },
+   "required": [
+    "course",
+    "player_no",
+    "player_name",
+    "official"
+   ],
+   "title": "Entry",
+   "type": "object"
+  },
+  "EntryStats": {
+   "additionalProperties": false,
+   "properties": {
+    "sigma": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "本番 ST の標準偏差 (直近365日、30走未満は平均で補った値)",
+     "title": "Sigma"
+    },
+    "sigma_imputed": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "30走未満で平均値を入れたとき true",
+     "title": "Sigma Imputed"
+    },
+    "my_course": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/MyCourse"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "series": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/Series"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "pattern": {
+     "items": {
+      "$ref": "#/$defs/Pattern"
+     },
+     "title": "Pattern",
+     "type": "array"
+    }
+   },
+   "title": "EntryStats",
+   "type": "object"
+  },
+  "Exhibition": {
+   "additionalProperties": false,
+   "properties": {
+    "time": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Time"
+    },
+    "rank": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "展示タイムのレース内順位 (1 が最速)",
+     "title": "Rank"
+    }
+   },
+   "title": "Exhibition",
+   "type": "object"
+  },
+  "Flag": {
+   "additionalProperties": false,
+   "properties": {
+    "rank": {
+     "title": "Rank",
+     "type": "integer"
+    },
+    "name": {
+     "title": "Name",
+     "type": "string"
+    },
+    "prob": {
+     "title": "Prob",
+     "type": "number"
+    },
+    "hit": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "実際の展開だったか。finished まで、または展開が決まらないとき null",
+     "title": "Hit"
+    }
+   },
+   "required": [
+    "rank",
+    "name",
+    "prob"
+   ],
+   "title": "Flag",
+   "type": "object"
+  },
+  "MyCourse": {
+   "additionalProperties": false,
+   "description": "自分の艇番のコースの成績 (直近365日・当日を含まない)。率は 0〜1。",
+   "properties": {
+    "run_cnt": {
+     "title": "Run Cnt",
+     "type": "integer"
+    },
+    "1st_rate": {
+     "title": "1St Rate",
+     "type": "number"
+    },
+    "3ren_rate": {
+     "title": "3Ren Rate",
+     "type": "number"
+    },
+    "st_avg": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "St Avg"
+    }
+   },
+   "required": [
+    "run_cnt",
+    "1st_rate",
+    "3ren_rate"
+   ],
+   "title": "MyCourse",
+   "type": "object"
+  },
+  "OddsSnapshot": {
+   "additionalProperties": false,
+   "properties": {
+    "min_to_close": {
+     "description": "予定していた取得時刻 (締切の何分前か)",
+     "title": "Min To Close",
+     "type": "integer"
+    },
+    "fetched_at": {
+     "title": "Fetched At",
+     "type": "string"
+    },
+    "odds": {
+     "additionalProperties": {
+      "type": "number"
+     },
+     "description": "trifecta に載っている組み合わせと、10倍以下の組み合わせだけ。全120通りは data/live_odds/",
+     "title": "Odds",
+     "type": "object"
+    }
+   },
+   "required": [
+    "min_to_close",
+    "fetched_at",
+    "odds"
+   ],
+   "title": "OddsSnapshot",
+   "type": "object"
+  },
+  "Official": {
+   "additionalProperties": false,
+   "description": "番組表 (B_csv) の値。公式の表示のまま (勝率は 6.21、2連対率は 48.3)。",
+   "properties": {
+    "national_win_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "National Win Rate"
+    },
+    "national_2rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "National 2Rate"
+    },
+    "local_win_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Local Win Rate"
+    },
+    "local_2rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Local 2Rate"
+    },
+    "motor_no": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Motor No"
+    },
+    "motor_2rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Motor 2Rate"
+    },
+    "boat_no": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Boat No"
+    },
+    "boat_2rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Boat 2Rate"
+    }
+   },
+   "title": "Official",
+   "type": "object"
+  },
+  "Pattern": {
+   "additionalProperties": false,
+   "description": "1号艇は「やられる側」、2〜6号艇は「やる側」の率なので、艇番でラベルが変わる。",
+   "properties": {
+    "label": {
+     "title": "Label",
+     "type": "string"
+    },
+    "value": {
+     "title": "Value",
+     "type": "number"
+    },
+    "run_cnt": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "その率の元になった出走数 (そのコースでの出走数)",
+     "title": "Run Cnt"
+    }
+   },
+   "required": [
+    "label",
+    "value"
+   ],
+   "title": "Pattern",
+   "type": "object"
+  },
+  "Pick": {
+   "additionalProperties": false,
+   "properties": {
+    "combo": {
+     "title": "Combo",
+     "type": "string"
+    },
+    "odds": {
+     "title": "Odds",
+     "type": "number"
+    },
+    "ev": {
+     "title": "Ev",
+     "type": "number"
+    },
+    "rule": {
+     "title": "Rule",
+     "type": "string"
+    },
+    "stake": {
+     "title": "Stake",
+     "type": "integer"
+    },
+    "hit": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hit"
+    },
+    "payout": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "払戻額 (円)。外れは 0、返還は stake",
+     "title": "Payout"
+    },
+    "refunded": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "返還艇を含み、購入額が返ってきたとき true",
+     "title": "Refunded"
+    }
+   },
+   "required": [
+    "combo",
+    "odds",
+    "ev",
+    "rule",
+    "stake"
+   ],
+   "title": "Pick",
+   "type": "object"
+  },
+  "Race": {
+   "additionalProperties": false,
+   "properties": {
+    "race_id": {
+     "title": "Race Id",
+     "type": "string"
+    },
+    "venue_id": {
+     "title": "Venue Id",
+     "type": "integer"
+    },
+    "venue_name": {
+     "title": "Venue Name",
+     "type": "string"
+    },
+    "race_no": {
+     "title": "Race No",
+     "type": "integer"
+    },
+    "close_at": {
+     "title": "Close At",
+     "type": "string"
+    },
+    "status": {
+     "enum": [
+      "scheduled",
+      "predicted",
+      "closed",
+      "finished",
+      "cancelled"
+     ],
+     "title": "Status",
+     "type": "string"
+    },
+    "fixed_entry": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Fixed Entry"
+    },
+    "entries": {
+     "items": {
+      "$ref": "#/$defs/Entry"
+     },
+     "title": "Entries",
+     "type": "array"
+    },
+    "flags": {
+     "anyOf": [
+      {
+       "items": {
+        "$ref": "#/$defs/Flag"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "展開確率の高い順 (全14)。予想前は null",
+     "title": "Flags"
+    },
+    "trifecta": {
+     "anyOf": [
+      {
+       "items": {
+        "$ref": "#/$defs/Trifecta"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "確率の上位30通り + picks。予想前は null",
+     "title": "Trifecta"
+    },
+    "weather": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/Weather"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "odds_snapshots": {
+     "items": {
+      "$ref": "#/$defs/OddsSnapshot"
+     },
+     "title": "Odds Snapshots",
+     "type": "array"
+    },
+    "picks": {
+     "items": {
+      "$ref": "#/$defs/Pick"
+     },
+     "title": "Picks",
+     "type": "array"
+    },
+    "result": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/Result"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "predicted_at": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Predicted At"
+    },
+    "commentary": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Commentary"
+    },
+    "commentary_generated_at": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Commentary Generated At"
+    }
+   },
+   "required": [
+    "race_id",
+    "venue_id",
+    "venue_name",
+    "race_no",
+    "close_at",
+    "status",
+    "entries"
+   ],
+   "title": "Race",
+   "type": "object"
+  },
+  "Result": {
+   "additionalProperties": false,
+   "properties": {
+    "arrival": {
+     "description": "ゴールした順の艇番 (F・欠場などの艇は含まない)",
+     "items": {
+      "type": "integer"
+     },
+     "title": "Arrival",
+     "type": "array"
+    },
+    "trifecta": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Trifecta"
+    },
+    "payout": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "3連単の払戻 (100円あたり)",
+     "title": "Payout"
+    },
+    "decided_by": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "決まり手",
+     "title": "Decided By"
+    },
+    "development": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "展開 (14分類のどれか)。決まらないときは null",
+     "title": "Development"
+    },
+    "entry": {
+     "description": "進入コース順の艇番",
+     "items": {
+      "type": "integer"
+     },
+     "title": "Entry",
+     "type": "array"
+    },
+    "model_rank": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Model Rank"
+    },
+    "model_prob": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Model Prob"
+    },
+    "market_prob": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "最後に取った締切前オッズの逆数を 120 通りで正規化",
+     "title": "Market Prob"
+    },
+    "refunded": {
+     "default": false,
+     "title": "Refunded",
+     "type": "boolean"
+    },
+    "refunded_boats": {
+     "items": {
+      "type": "integer"
+     },
+     "title": "Refunded Boats",
+     "type": "array"
+    }
+   },
+   "required": [
+    "arrival"
+   ],
+   "title": "Result",
+   "type": "object"
+  },
+  "Series": {
+   "additionalProperties": false,
+   "description": "節 (同じ場で連続して出ている開催) の前日までの成績。",
+   "properties": {
+    "run_cnt": {
+     "title": "Run Cnt",
+     "type": "integer"
+    },
+    "avg_rank": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Avg Rank"
+    },
+    "avg_st": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Avg St"
+    }
+   },
+   "required": [
+    "run_cnt"
+   ],
+   "title": "Series",
+   "type": "object"
+  },
+  "Trifecta": {
+   "additionalProperties": false,
+   "properties": {
+    "rank": {
+     "description": "モデルの確率の順位 (1〜120)",
+     "title": "Rank",
+     "type": "integer"
+    },
+    "combo": {
+     "title": "Combo",
+     "type": "string"
+    },
+    "prob": {
+     "title": "Prob",
+     "type": "number"
+    },
+    "odds": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "最後に取った締切前オッズ。未取得なら null",
+     "title": "Odds"
+    },
+    "ev": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "prob × odds",
+     "title": "Ev"
+    },
+    "hit": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hit"
+    }
+   },
+   "required": [
+    "rank",
+    "combo",
+    "prob"
+   ],
+   "title": "Trifecta",
+   "type": "object"
+  },
+  "Weather": {
+   "additionalProperties": false,
+   "properties": {
+    "wind_dir": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "風向 (方位角、度)",
+     "title": "Wind Dir"
+    },
+    "wind_dir_label": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Wind Dir Label"
+    },
+    "wind_spd": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Wind Spd"
+    },
+    "wave": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Wave"
+    },
+    "fetched_at": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Fetched At"
+    }
+   },
+   "title": "Weather",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "description": "races/YYYY-MM-DD/<race_id>.json — 1レースの全部。一覧からレースを開いたときに読む。",
+ "properties": {
+  "schema_version": {
+   "default": 1,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "date": {
+   "title": "Date",
+   "type": "string"
+  },
+  "generated_at": {
+   "title": "Generated At",
+   "type": "string"
+  },
+  "pick_rule": {
+   "description": "picks の条件 (全レース共通)",
+   "title": "Pick Rule",
+   "type": "string"
+  },
+  "race": {
+   "$ref": "#/$defs/Race"
+  }
+ },
+ "required": [
+  "date",
+  "generated_at",
+  "pick_rule",
+  "race"
+ ],
+ "title": "RaceDetail",
+ "type": "object"
+}

@@ -1,0 +1,361 @@
+{
+ "$defs": {
+  "ListEntry": {
+   "additionalProperties": false,
+   "properties": {
+    "course": {
+     "title": "Course",
+     "type": "integer"
+    },
+    "player_name": {
+     "title": "Player Name",
+     "type": "string"
+    },
+    "class": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Class"
+    },
+    "p_win": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "P Win"
+    },
+    "arrival": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Arrival"
+    }
+   },
+   "required": [
+    "course",
+    "player_name"
+   ],
+   "title": "ListEntry",
+   "type": "object"
+  },
+  "ListFlag": {
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "title": "Name",
+     "type": "string"
+    },
+    "prob": {
+     "title": "Prob",
+     "type": "number"
+    },
+    "hit": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hit"
+    }
+   },
+   "required": [
+    "name",
+    "prob"
+   ],
+   "title": "ListFlag",
+   "type": "object"
+  },
+  "ListPicks": {
+   "additionalProperties": false,
+   "properties": {
+    "count": {
+     "description": "picks の点数 (0 なら買い目なし)",
+     "title": "Count",
+     "type": "integer"
+    },
+    "hits": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "当たった点数。finished まで null",
+     "title": "Hits"
+    },
+    "stake": {
+     "default": 0,
+     "title": "Stake",
+     "type": "integer"
+    },
+    "payout": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "払戻の合計 (円)。finished まで null",
+     "title": "Payout"
+    }
+   },
+   "required": [
+    "count"
+   ],
+   "title": "ListPicks",
+   "type": "object"
+  },
+  "ListResult": {
+   "additionalProperties": false,
+   "properties": {
+    "arrival": {
+     "items": {
+      "type": "integer"
+     },
+     "title": "Arrival",
+     "type": "array"
+    },
+    "trifecta": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Trifecta"
+    },
+    "payout": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Payout"
+    },
+    "refunded": {
+     "default": false,
+     "title": "Refunded",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "arrival"
+   ],
+   "title": "ListResult",
+   "type": "object"
+  },
+  "ListTrifecta": {
+   "additionalProperties": false,
+   "properties": {
+    "combo": {
+     "title": "Combo",
+     "type": "string"
+    },
+    "prob": {
+     "title": "Prob",
+     "type": "number"
+    },
+    "odds": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Odds"
+    },
+    "hit": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hit"
+    }
+   },
+   "required": [
+    "combo",
+    "prob"
+   ],
+   "title": "ListTrifecta",
+   "type": "object"
+  },
+  "RaceListItem": {
+   "additionalProperties": false,
+   "properties": {
+    "race_id": {
+     "title": "Race Id",
+     "type": "string"
+    },
+    "venue_id": {
+     "title": "Venue Id",
+     "type": "integer"
+    },
+    "venue_name": {
+     "title": "Venue Name",
+     "type": "string"
+    },
+    "race_no": {
+     "title": "Race No",
+     "type": "integer"
+    },
+    "close_at": {
+     "title": "Close At",
+     "type": "string"
+    },
+    "status": {
+     "enum": [
+      "scheduled",
+      "predicted",
+      "closed",
+      "finished",
+      "cancelled"
+     ],
+     "title": "Status",
+     "type": "string"
+    },
+    "entries": {
+     "items": {
+      "$ref": "#/$defs/ListEntry"
+     },
+     "title": "Entries",
+     "type": "array"
+    },
+    "top_flag": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ListFlag"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "展開の1位。予想前は null"
+    },
+    "top_trifecta": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ListTrifecta"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "3連単の1位。予想前は null"
+    },
+    "picks": {
+     "$ref": "#/$defs/ListPicks"
+    },
+    "result": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ListResult"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "detail": {
+     "description": "詳細ファイルのパス (data/ からの相対)",
+     "title": "Detail",
+     "type": "string"
+    }
+   },
+   "required": [
+    "race_id",
+    "venue_id",
+    "venue_name",
+    "race_no",
+    "close_at",
+    "status",
+    "entries",
+    "picks",
+    "detail"
+   ],
+   "title": "RaceListItem",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "description": "races/YYYY-MM-DD.json — その日のレース一覧。",
+ "properties": {
+  "schema_version": {
+   "default": 1,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "date": {
+   "title": "Date",
+   "type": "string"
+  },
+  "generated_at": {
+   "title": "Generated At",
+   "type": "string"
+  },
+  "pick_rule": {
+   "description": "picks の条件 (全レース共通)",
+   "title": "Pick Rule",
+   "type": "string"
+  },
+  "races": {
+   "items": {
+    "$ref": "#/$defs/RaceListItem"
+   },
+   "title": "Races",
+   "type": "array"
+  }
+ },
+ "required": [
+  "date",
+  "generated_at",
+  "pick_rule",
+  "races"
+ ],
+ "title": "RaceDay",
+ "type": "object"
+}

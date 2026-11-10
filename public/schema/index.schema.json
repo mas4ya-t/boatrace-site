@@ -1,0 +1,47 @@
+{
+ "additionalProperties": false,
+ "properties": {
+  "schema_version": {
+   "default": 1,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "updated_at": {
+   "title": "Updated At",
+   "type": "string"
+  },
+  "latest_date": {
+   "anyOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null,
+   "title": "Latest Date"
+  },
+  "dates": {
+   "description": "races/ にある日付 (昇順)",
+   "items": {
+    "type": "string"
+   },
+   "title": "Dates",
+   "type": "array"
+  },
+  "stats_files": {
+   "description": "stats/ にある集計の id",
+   "items": {
+    "type": "string"
+   },
+   "title": "Stats Files",
+   "type": "array"
+  }
+ },
+ "required": [
+  "updated_at"
+ ],
+ "title": "Index",
+ "type": "object"
+}

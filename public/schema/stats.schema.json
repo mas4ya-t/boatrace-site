@@ -1,0 +1,218 @@
+{
+ "$defs": {
+  "Chart": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "enum": [
+      "line",
+      "bar"
+     ],
+     "title": "Type",
+     "type": "string"
+    },
+    "x": {
+     "title": "X",
+     "type": "string"
+    },
+    "y": {
+     "items": {
+      "type": "string"
+     },
+     "title": "Y",
+     "type": "array"
+    },
+    "title": {
+     "title": "Title",
+     "type": "string"
+    }
+   },
+   "required": [
+    "type",
+    "x",
+    "y",
+    "title"
+   ],
+   "title": "Chart",
+   "type": "object"
+  },
+  "Column": {
+   "additionalProperties": false,
+   "properties": {
+    "key": {
+     "title": "Key",
+     "type": "string"
+    },
+    "label": {
+     "title": "Label",
+     "type": "string"
+    },
+    "type": {
+     "enum": [
+      "string",
+      "number",
+      "percent",
+      "percent_ci"
+     ],
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "key",
+    "label",
+    "type"
+   ],
+   "title": "Column",
+   "type": "object"
+  },
+  "PercentCI": {
+   "additionalProperties": false,
+   "description": "点推定だけで判断しないよう、CI と試行回数を必ず持たせる。",
+   "properties": {
+    "value": {
+     "title": "Value",
+     "type": "number"
+    },
+    "lo": {
+     "title": "Lo",
+     "type": "number"
+    },
+    "hi": {
+     "title": "Hi",
+     "type": "number"
+    },
+    "n": {
+     "description": "点数 (購入した組み合わせの数)",
+     "title": "N",
+     "type": "integer"
+    },
+    "hits": {
+     "description": "的中回数",
+     "title": "Hits",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "value",
+    "lo",
+    "hi",
+    "n",
+    "hits"
+   ],
+   "title": "PercentCI",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "properties": {
+  "schema_version": {
+   "default": 1,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "id": {
+   "title": "Id",
+   "type": "string"
+  },
+  "title": {
+   "title": "Title",
+   "type": "string"
+  },
+  "description": {
+   "title": "Description",
+   "type": "string"
+  },
+  "source": {
+   "title": "Source",
+   "type": "string"
+  },
+  "period": {
+   "title": "Period",
+   "type": "string"
+  },
+  "updated_at": {
+   "title": "Updated At",
+   "type": "string"
+  },
+  "note": {
+   "anyOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null,
+   "title": "Note"
+  },
+  "columns": {
+   "items": {
+    "$ref": "#/$defs/Column"
+   },
+   "title": "Columns",
+   "type": "array"
+  },
+  "rows": {
+   "items": {
+    "additionalProperties": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/PercentCI"
+      },
+      {
+       "type": "number"
+      },
+      {
+       "type": "integer"
+      },
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "type": "object"
+   },
+   "title": "Rows",
+   "type": "array"
+  },
+  "charts": {
+   "items": {
+    "$ref": "#/$defs/Chart"
+   },
+   "title": "Charts",
+   "type": "array"
+  },
+  "findings": {
+   "items": {
+    "type": "string"
+   },
+   "title": "Findings",
+   "type": "array"
+  },
+  "superseded": {
+   "description": "後から訂正された内容 (日付つき)",
+   "items": {
+    "type": "string"
+   },
+   "title": "Superseded",
+   "type": "array"
+  }
+ },
+ "required": [
+  "id",
+  "title",
+  "description",
+  "source",
+  "period",
+  "updated_at",
+  "columns",
+  "rows"
+ ],
+ "title": "StatsFile",
+ "type": "object"
+}
