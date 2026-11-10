@@ -1,0 +1,5 @@
+# 検索除け。GitHub Pages のプロジェクトサイト (mas4ya-t.github.io/boatrace-site/) では、
+# 検索エンジンはドメイン直下の robots.txt しか読まないので、このファイルは効かない (独自ドメインにしたときのために置いている)。
+# 実際に効いているのは、各 HTML の <meta name="robots" content="noindex, nofollow, noarchive">。
+User-agent: *
+Disallow: /
