@@ -256,3 +256,9 @@ th, td { padding: 6px 7px; }
 .sum-card .sum-label { font-weight: 700; font-size: .92rem; }
 .sum-card .big { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
 .chart { max-width: 560px; }
+
+/* トップ: 「これから」「締切済み」の見出し */
+.list-head { margin: 16px 0 4px; font-size: 1rem; }
+/* 逃げて勝ったときの相手 (小さな表) */
+.partners { margin: 4px 0; }
+.partners th, .partners td { padding: 4px 6px; }

@@ -32,6 +32,8 @@ const dateFromRaceId = (id) => (/^\d{6}_/.test(id || "") ? `20${id.slice(0, 2)}-
 const weekday = (d) => "日月火水木金土"[new Date(`${d}T00:00:00+09:00`).getDay()];
 const fmtDate = (d) => (d ? `${Number(d.slice(5, 7))}月${Number(d.slice(8, 10))}日（${weekday(d)}）` : "");
 const shortDate = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}（${weekday(d)}）`;
+/** 今日の日付 (日本時間) "YYYY-MM-DD" */
+const todayJST = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
 
 async function getJSON(path) {
   const res = await fetch(path, { cache: "no-cache" });
@@ -123,14 +125,24 @@ async function pageIndex() {
   const shown = venue ? races.filter((r) => String(r.venue_id) === venue) : races;
   const nPicks = races.reduce((s, r) => s + (r.picks?.count || 0), 0);
 
+  // 今日は「これから」(締切が近い順) を上、「締切済み」(新しい順) を下に。ほかの日は締切順
+  const now = Date.now();
+  const isToday = date === todayJST();
+  const upcoming = isToday ? shown.filter((r) => new Date(r.close_at).getTime() > now) : shown;
+  const closed = isToday ? shown.filter((r) => new Date(r.close_at).getTime() <= now).reverse() : [];
+  const list = isToday
+    ? (upcoming.length ? `<h2 class="list-head">これから <span class="muted small">締切が近い順・${upcoming.length} レース</span></h2>${upcoming.map(raceCard).join("")}` : "")
+      + (closed.length ? `<h2 class="list-head">締切済み <span class="muted small">新しい順・${closed.length} レース</span></h2>${closed.map(raceCard).join("")}` : "")
+    : shown.map(raceCard).join("");
+
   main.innerHTML = `
-    <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース・締切順</span></div>
+    <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース${isToday ? "" : "・締切順"}</span></div>
     <div class="chips" role="group" aria-label="会場で絞る">
       <button class="chip" data-v="" aria-pressed="${!venue}">すべて</button>
       ${venues.map(([id, name]) => `<button class="chip" data-v="${id}" aria-pressed="${venue === id}">${esc(name)}</button>`).join("")}
     </div>
     ${nPicks ? `<div class="notice">${PICKS_NOTICE}</div>` : ""}
-    <div id="races">${shown.map(raceCard).join("") || '<div class="empty">レースがありません</div>'}</div>`;
+    <div id="races">${list || '<div class="empty">レースがありません</div>'}</div>`;
   main.querySelectorAll(".chip").forEach((b) => (b.onclick = () => go(date, b.dataset.v)));
 }
 
@@ -276,10 +288,19 @@ function ownStats(course, s) {
       <span><span class="k">平均着順</span> <span class="num">${fix(se.avg_rank, 2)}</span></span>
       <span><span class="k">平均ST</span> <span class="num">${fix(se.avg_st, 2)}</span></span>
     </div>` : "";
-  const pat = (s.pattern || []).length ? `<div class="section-label">${course === 1 ? "1コースでの決まり手（やられる側）" : "このコースでの決まり手（やる側）"}</div>
+  const pat = (s.pattern || []).length ? `<div class="section-label">${course === 1 ? "1コースでの決まり手（やられる側）" : "このコースでの決まり手（やる側）と、1号艇が逃げたときの着"}</div>
     <div class="grid2">${s.pattern.map((p) => `<span class="${low(p.run_cnt).trim()}"><span class="k">${esc(p.label)}</span> <span class="num">${pct(p.value)}</span>${isNum(p.run_cnt) && p.run_cnt < LOW_RUNS ? " " + runs(p.run_cnt) : ""}</span>`).join("")}</div>` : "";
+  const np = s.nige_partners;
+  const partners = np ? `<div class="section-label">逃げて勝ったとき、2着・3着に来たコース <span class="faint num">(${int(np.wins)}回)</span></div>
+    <div class="table-wrap partners${low(np.wins)}"><table>
+      <thead><tr><th></th>${np.second.map((x) => `<th class="r">${boat(x.course)}</th>`).join("")}</tr></thead>
+      <tbody>
+        <tr><td class="muted">2着</td>${np.second.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
+        <tr><td class="muted">3着</td>${np.third.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
+      </tbody></table></div>
+    <div class="faint small">この選手が1コースから逃げて勝ったレース（${int(np.wins)}回）のうち、2着・3着がそのコースだった割合。</div>` : "";
   return `<details class="own"><summary>独自集計（直近1年）</summary>
-    <div class="grid2">${sigma}</div>${myc}${ser}${pat}
+    <div class="grid2">${sigma}</div>${myc}${ser}${pat}${partners}
     <div class="faint small">出走 ${LOW_RUNS} 未満の率は当てにならないので薄く表示しています。</div>
   </details>`;
 }
