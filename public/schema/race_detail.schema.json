@@ -34,8 +34,21 @@
      "description": "艇番以外の特徴量の寄与の合計",
      "title": "Residual"
     },
+    "residual_rel": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "residual から6艇平均を引いた値",
+     "title": "Residual Rel"
+    },
     "top": {
-     "description": "艇番以外で、寄与の絶対値が大きい順",
+     "description": "艇番以外で、contrib_rel の絶対値が大きい順",
      "items": {
       "$ref": "#/$defs/ContribItem"
      },
@@ -83,6 +96,19 @@
      "default": null,
      "description": "寄与 (正なら押し上げ)",
      "title": "Contrib"
+    },
+    "contrib_rel": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "6艇平均を引いた寄与 (ほかの艇との差)。強度の寄与だけ",
+     "title": "Contrib Rel"
     }
    },
    "required": [
