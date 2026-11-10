@@ -1,5 +1,96 @@
 {
  "$defs": {
+  "BoatContribution": {
+   "additionalProperties": false,
+   "description": "強度 (LightGBM) の寄与を展開確率で重み付けして足したもの。定数項は全艇共通なので含めない。",
+   "properties": {
+    "course": {
+     "title": "Course",
+     "type": "integer"
+    },
+    "base": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "艇番 (course) による分。説明には使わない",
+     "title": "Base"
+    },
+    "residual": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "艇番以外の特徴量の寄与の合計",
+     "title": "Residual"
+    },
+    "top": {
+     "description": "艇番以外で、寄与の絶対値が大きい順",
+     "items": {
+      "$ref": "#/$defs/ContribItem"
+     },
+     "title": "Top",
+     "type": "array"
+    }
+   },
+   "required": [
+    "course",
+    "top"
+   ],
+   "title": "BoatContribution",
+   "type": "object"
+  },
+  "ContribItem": {
+   "additionalProperties": false,
+   "properties": {
+    "feature": {
+     "description": "特徴量の内部名 (日本語にするのは表示側・文章を作る側)",
+     "title": "Feature",
+     "type": "string"
+    },
+    "value": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "その特徴量の値 (データセットと同じ単位)",
+     "title": "Value"
+    },
+    "contrib": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "寄与 (正なら押し上げ)",
+     "title": "Contrib"
+    }
+   },
+   "required": [
+    "feature"
+   ],
+   "title": "ContribItem",
+   "type": "object"
+  },
   "Entry": {
    "additionalProperties": false,
    "properties": {
@@ -249,6 +340,31 @@
    "title": "EntryStats",
    "type": "object"
   },
+  "Evidence": {
+   "additionalProperties": false,
+   "properties": {
+    "contributions": {
+     "items": {
+      "$ref": "#/$defs/BoatContribution"
+     },
+     "title": "Contributions",
+     "type": "array"
+    },
+    "flag_contributions": {
+     "items": {
+      "$ref": "#/$defs/FlagContribution"
+     },
+     "title": "Flag Contributions",
+     "type": "array"
+    }
+   },
+   "required": [
+    "contributions",
+    "flag_contributions"
+   ],
+   "title": "Evidence",
+   "type": "object"
+  },
   "Exhibition": {
    "additionalProperties": false,
    "properties": {
@@ -316,6 +432,41 @@
     "prob"
    ],
    "title": "Flag",
+   "type": "object"
+  },
+  "FlagContribution": {
+   "additionalProperties": false,
+   "description": "展開確率 (多項ロジット) の、その展開の対数確率への1次の寄与 (ほかの展開との差)。会場ダミーは venue にまとめる。",
+   "properties": {
+    "flag": {
+     "title": "Flag",
+     "type": "string"
+    },
+    "prob": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Prob"
+    },
+    "top": {
+     "items": {
+      "$ref": "#/$defs/ContribItem"
+     },
+     "title": "Top",
+     "type": "array"
+    }
+   },
+   "required": [
+    "flag",
+    "top"
+   ],
+   "title": "FlagContribution",
    "type": "object"
   },
   "MyCourse": {
@@ -820,6 +971,18 @@
      ],
      "default": null,
      "title": "Commentary Generated At"
+    },
+    "evidence": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/Evidence"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "説明文を作るための根拠 (寄与)。予想前は null"
     }
    },
    "required": [
