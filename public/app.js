@@ -191,6 +191,7 @@ function raceCard(r) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const LOW_RUNS = 30;   // 出走数がこれ未満の率は薄く出す
+const LOW_WINS = 10;   // 展開別に勝ったときの相手: 勝った回数がこれ未満は薄く出す
 
 async function pageRace() {
   document.body.insertAdjacentHTML("afterbegin", header(""));
@@ -290,15 +291,20 @@ function ownStats(course, s) {
     </div>` : "";
   const pat = (s.pattern || []).length ? `<div class="section-label">${course === 1 ? "1コースでの決まり手（やられる側）" : "このコースでの決まり手（やる側）と、1号艇が逃げたときの着"}</div>
     <div class="grid2">${s.pattern.map((p) => `<span class="${low(p.run_cnt).trim()}"><span class="k">${esc(p.label)}</span> <span class="num">${pct(p.value)}</span>${isNum(p.run_cnt) && p.run_cnt < LOW_RUNS ? " " + runs(p.run_cnt) : ""}</span>`).join("")}</div>` : "";
-  const np = s.nige_partners;
-  const partners = np ? `<div class="section-label">逃げて勝ったとき、2着・3着に来たコース <span class="faint num">(${int(np.wins)}回)</span></div>
-    <div class="table-wrap partners${low(np.wins)}"><table>
-      <thead><tr><th></th>${np.second.map((x) => `<th class="r">${boat(x.course)}</th>`).join("")}</tr></thead>
+  // 展開別に勝ったときの相手。win_partners が無い古いデータは nige_partners (1号艇の逃げだけ) で出す
+  const wp = (s.win_partners && s.win_partners.length) ? s.win_partners
+    : s.nige_partners ? [{ development: "1逃げ", ...s.nige_partners }] : [];
+  const partnerTable = (p) => `<div class="partner-head">${esc(p.development)}で勝ったとき <span class="faint num">(${int(p.wins)}回)</span></div>
+    ${p.wins ? `<div class="table-wrap partners${p.wins < LOW_WINS ? " low" : ""}"><table>
+      <thead><tr><th></th>${p.second.map((x) => `<th class="r">${boat(x.course)}</th>`).join("")}</tr></thead>
       <tbody>
-        <tr><td class="muted">2着</td>${np.second.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
-        <tr><td class="muted">3着</td>${np.third.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
-      </tbody></table></div>
-    <div class="faint small">この選手が1コースから逃げて勝ったレース（${int(np.wins)}回）のうち、2着・3着がそのコースだった割合。</div>` : "";
+        <tr><td class="muted">2着</td>${p.second.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
+        <tr><td class="muted">3着</td>${p.third.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
+      </tbody></table></div>` : ""}`;
+  const partners = wp.length ? `<div class="section-label">勝ったとき、2着・3着に来たコース（展開別）</div>
+    ${wp.map(partnerTable).join("")}
+    <div class="faint small">この選手がその展開で勝ったレースのうち、2着・3着がそのコースだった割合。
+      1〜2コース以外の展開は年に数回しか起きないので、${LOW_WINS}回未満は薄く表示しています（偶然の影響が大きい）。</div>` : "";
   return `<details class="own"><summary>独自集計（直近1年）</summary>
     <div class="grid2">${sigma}</div>${myc}${ser}${pat}${partners}
     <div class="faint small">出走 ${LOW_RUNS} 未満の率は当てにならないので薄く表示しています。</div>

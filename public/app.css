@@ -262,3 +262,4 @@ th, td { padding: 6px 7px; }
 /* 逃げて勝ったときの相手 (小さな表) */
 .partners { margin: 4px 0; }
 .partners th, .partners td { padding: 4px 6px; }
+.partner-head { font-size: .85rem; margin: 8px 0 0; }

@@ -235,7 +235,15 @@
       }
      ],
      "default": null,
-     "description": "1号艇だけ。逃げて勝ったときの2着・3着のコース"
+     "description": "(旧) 1号艇だけ。逃げて勝ったときの2着・3着のコース。win_partners に含まれる"
+    },
+    "win_partners": {
+     "description": "自分の艇番のコースで起こりうる展開ごとの、勝ったときの2着・3着のコース",
+     "items": {
+      "$ref": "#/$defs/WinPartners"
+     },
+     "title": "Win Partners",
+     "type": "array"
     }
    },
    "title": "EntryStats",
@@ -1120,6 +1128,44 @@
     }
    },
    "title": "Weather",
+   "type": "object"
+  },
+  "WinPartners": {
+   "additionalProperties": false,
+   "description": "その選手がこの展開で勝ったとき、2着・3着に来たのが何コースだったか (直近365日・全国)。",
+   "properties": {
+    "development": {
+     "description": "展開 (14分類の名前。例: 3まくり)",
+     "title": "Development",
+     "type": "string"
+    },
+    "wins": {
+     "description": "この展開で勝った回数 (率の分母)。少ないものは当てにならない",
+     "title": "Wins",
+     "type": "integer"
+    },
+    "second": {
+     "items": {
+      "$ref": "#/$defs/PartnerRate"
+     },
+     "title": "Second",
+     "type": "array"
+    },
+    "third": {
+     "items": {
+      "$ref": "#/$defs/PartnerRate"
+     },
+     "title": "Third",
+     "type": "array"
+    }
+   },
+   "required": [
+    "development",
+    "wins",
+    "second",
+    "third"
+   ],
+   "title": "WinPartners",
    "type": "object"
   }
  },
