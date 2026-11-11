@@ -134,6 +134,7 @@ async function pageHome() {
       ${races.length ? daySummary(races, isToday, isOpen) : '<div class="muted">データがありません</div>'}
       <a class="btn" href="races.html?date=${date}">レース一覧を見る</a>
     </section>
+    ${races.length ? section("会場", isToday ? "残りレース数・次の締切" : "", venueGrid(races, date, isToday, isOpen)) : ""}
     ${soon.length ? section("もうすぐ締切", "", soon.map((r) => raceRow(r)).join(""),
       `<a class="more" href="races.html?date=${date}&view=next">締切前のレースをすべて見る</a>`) : ""}
     ${close.length ? section("混戦になりそうなレース", "展開1位の確率が低い順", close.map((r) => raceRow(r)).join("")) : ""}
@@ -233,24 +234,20 @@ async function pageRaces() {
 
   const viewSeg = Object.entries(VIEWS).map(([k, label]) =>
     `<a class="seg${k === view ? " on" : ""}" href="?${qs({ date, venue, view: k })}" aria-pressed="${k === view}">${label}</a>`).join("");
-  const held = new Map(venues);
-  const cell = (id) => {
-    const name = VENUE_NAMES[Number(id) - 1];
-    if (!held.has(id)) return `<span class="vcell off" aria-disabled="true">${name}</span>`;
-    const rs = races.filter((r) => String(r.venue_id) === id);
-    const left = rs.filter(isOpen);
-    const meta = isToday ? (left.length ? `残${left.length}・${hhmm(left[0].close_at)}` : "終了") : `${rs.length}R`;
-    return `<a class="vcell${venue === id ? " on" : ""}" href="?${qs({ date, venue: id, view: q.get("view") || "" })}" aria-pressed="${venue === id}">
-      ${name}<small class="num">${meta}</small></a>`;
-  };
-  const venueGrid = `<a class="vall${venue ? "" : " on"}" href="?${qs({ date, view: q.get("view") || "" })}" aria-pressed="${!venue}">全会場（${venues.length}場）</a>
-    <div class="vgrid" role="group" aria-label="会場">${VENUE_NAMES.map((_, i) => cell(String(i + 1).padStart(2, "0"))).join("")}</div>`;
+  const venueSel = `<select id="venue-select" aria-label="会場">
+      <option value="">全会場（${venues.length}場）</option>
+      ${venues.map(([id, name]) => {
+        const left = races.filter((r) => String(r.venue_id) === id && isOpen(r)).length;
+        return `<option value="${id}"${venue === id ? " selected" : ""}>${esc(name)}${isToday ? `（残り ${left}）` : ""}</option>`;
+      }).join("")}
+    </select>`;
 
   main.innerHTML = `
     <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
     ${daySummary(races, isToday, isOpen)}
-    <div class="ctrl">${venueGrid}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
+    <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
     <div id="races">${list}</div>`;
+  $("#venue-select").onchange = (e) => (location.search = qs({ date, venue: e.target.value, view: q.get("view") || "" }));
 }
 
 const VIEWS = { next: "締切前", all: "全部", picks: "picks", results: "結果" };
@@ -259,6 +256,21 @@ const VENUE_NAMES = ["桐生", "戸田", "江戸川", "平和島", "多摩川", 
 const byClose = (a, b) => (a.close_at < b.close_at ? -1 : a.close_at > b.close_at ? 1 : a.race_id < b.race_id ? -1 : 1);
 /** 空の値を落として URL パラメータに */
 const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v)).toString();
+
+/** 24場のグリッド (4列×6行)。開催していない場は灰色で押せない。押すとその会場のレース一覧へ */
+function venueGrid(races, date, isToday, isOpen) {
+  const held = new Set(races.map((r) => String(r.venue_id).padStart(2, "0")));
+  const cell = (id) => {
+    const name = VENUE_NAMES[Number(id) - 1];
+    if (!held.has(id)) return `<span class="vcell off" aria-disabled="true">${name}</span>`;
+    const rs = races.filter((r) => String(r.venue_id).padStart(2, "0") === id);
+    const left = rs.filter(isOpen);
+    const meta = isToday ? (left.length ? `残${left.length}・${hhmm(left[0].close_at)}` : "終了") : `${rs.length}R`;
+    return `<a class="vcell" href="races.html?${qs({ date, venue: String(Number(id)) })}">${name}<small class="num">${meta}</small></a>`;
+  };
+  return `<div class="vgrid" role="group" aria-label="会場">${VENUE_NAMES.map((_, i) => cell(String(i + 1).padStart(2, "0"))).join("")}</div>
+    <a class="vall" href="races.html?${qs({ date })}">全会場のレース一覧（${held.size}場）</a>`;
+}
 
 /** その日の状況 (予想済み・picks の成績・次の締切) */
 function daySummary(races, isToday, isOpen) {
