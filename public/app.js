@@ -409,6 +409,7 @@ function diffTag(p, base, label) {
 const vcell = (html, tag, cls = "") => `<td class="r num vc${cls ? " " + cls : ""}"><div>${html}</div>${tag || ""}</td>`;
 
 let BASE = null;   // baselines.json (レース詳細で読む)
+const SHOW_OWN_STATS = false;   // 独自集計 (コースと節の成績・決まり手・展開別の相手) を出すか。2026-11-12 から隠している
 
 function entriesSection(r) {
   const es = r.entries || [];
@@ -450,7 +451,7 @@ function entriesSection(r) {
     <div class="faint small">1着・3着内はモデルの確率（太字が最も高い艇）と、そのコースの実際の率（1コース ${pct(B.win_rate_by_course?.["1"], 0)}・6コース ${pct(B.win_rate_by_course?.["6"], 0)} など）との差。
       ほかの印は、全選手（直近2年）の中での位置（上位◯%は良いほう）。σ は小さいほどスタートが安定（平均 ${B.overall?.sigma?.mean ?? "—"}）。
       展示はレース最速との差で比べる。横にスクロールできます。</div>`;
-  return `<h2>出走表</h2>${entryLine}${table}${ownTables(es, courseOf)}`;
+  return `<h2>出走表</h2>${entryLine}${table}${SHOW_OWN_STATS ? ownTables(es, courseOf) : ""}`;
 }
 
 /** 独自集計 (直近365日・当日を含まない) を表に。コースの成績・節 / 決まり手 / 展開別に勝ったときの相手 (艇ごと) */
