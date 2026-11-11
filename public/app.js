@@ -409,7 +409,7 @@ function diffTag(p, base, label) {
 const vcell = (html, tag, cls = "") => `<td class="r num vc${cls ? " " + cls : ""}"><div>${html}</div>${tag || ""}</td>`;
 
 let BASE = null;   // baselines.json (レース詳細で読む)
-const SHOW_OWN_STATS = false;   // 独自集計 (コースと節の成績・決まり手・展開別の相手) を出すか。2026-11-12 から隠している
+const SHOW_OWN_STATS = true;    // 独自集計 (コースと節の成績・決まり手・展開別の相手) を出すか。出すときも、押すまで閉じておく
 
 function entriesSection(r) {
   const es = r.entries || [];
@@ -517,7 +517,8 @@ function ownTables(es, courseOf) {
     const html = partnersHtml(e.stats);
     return html ? `<details class="own"><summary>${boat(e.course)} ${esc(e.player_name)}</summary>${html}</details>` : "";
   }).join("");
-  return `<h2>独自集計（直近1年）</h2>${tableA}${tableB}${partners ? `<h3>展開別に勝ったときの相手</h3>${partners}` : ""}`;
+  return `<details class="own-all"><summary>独自集計（直近1年）</summary>
+    ${tableA}${tableB}${partners ? `<h3>展開別に勝ったときの相手</h3>${partners}` : ""}</details>`;
 }
 
 /** 展開別に勝ったとき、2着・3着に来たコース (艇ごと)。win_partners が無い古いデータは nige_partners (1逃げだけ) で出す */

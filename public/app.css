@@ -391,3 +391,14 @@ details.own > summary { display: flex; align-items: center; gap: 6px; }
 td.vc > div { white-space: nowrap; }
 td.vc .tag { margin-top: 2px; }
 td.vc.best > div { font-weight: 700; color: var(--accent); }
+
+/* レース詳細: 独自集計 (押すまで閉じておく) */
+details.own-all { margin: 16px 0; }
+details.own-all > summary {
+  display: block; text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: 8px;
+  cursor: pointer; font-weight: 700; color: var(--accent); list-style: none;
+}
+details.own-all > summary::-webkit-details-marker { display: none; }
+details.own-all > summary::after { content: " ▾"; }
+details.own-all[open] > summary::after { content: " ▴"; }
+details.own-all[open] > summary { margin-bottom: 4px; }
