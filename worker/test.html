@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- Worker のロジックをブラウザで確かめるページ (D1 と ASSETS は模造品)。
+     headless Chrome: chrome --headless=new --dump-dom http://localhost:<port>/worker/test.html  → <pre id="out"> に結果 -->
+<meta charset="utf-8">
+<pre id="out">running</pre>
+<script type="module">
+import worker from "./index.js";
+
+class FakeD1 {
+  constructor() { this.rows = new Map(); }
+  prepare(sql) {
+    const db = this;
+    return {
+      sql, args: [],
+      bind(...a) { this.args = a; return this; },
+      async first() { const r = db.rows.get(this.args[0]); return r ? { body: r.body, updated_at: r.updated_at } : null; },
+      run() { db.rows.set(this.args[0], { body: this.args[1], updated_at: this.args[2] }); },
+    };
+  }
+  async batch(stmts) { stmts.forEach((s) => s.run()); return []; }
+}
+const env = { DB: new FakeD1(), API_SECRET: "s3cret", ASSETS: { fetch: async () => new Response("asset", { status: 200 }) } };
+const call = (method, path, body, auth = "Bearer s3cret") => worker.fetch(new Request(`https://x.test${path}`, {
+  method, headers: auth ? { authorization: auth, "content-type": "application/json" } : {}, body: body === undefined ? undefined : JSON.stringify(body),
+}), env);
+
+const results = [];
+const ok = (name, cond, extra = "") => results.push(`${cond ? "OK" : "NG"} ${name}${extra ? " " + extra : ""}`);
+
+const day = { schema_version: 1, date: "2026-11-12", generated_at: "x", pick_rule: "p", races: [] };
+const detail = { schema_version: 1, date: "2026-11-12", generated_at: "x", pick_rule: "p", race: { race_id: "261112_19_09" } };
+const stats = { schema_version: 1, id: "summary", columns: [], rows: [] };
+const index = { schema_version: 1, dates: ["2026-11-12"] };
+
+let r = await call("POST", "/api/races/2026-11-12", day, null);
+ok("認証なしの書き込みは 401", r.status === 401);
+r = await call("POST", "/api/races/2026-11-12", day, "Bearer wrong!");
+ok("違うシークレットは 401", r.status === 401);
+r = await call("POST", "/api/races/2026-11-12", day);
+ok("一覧の書き込み", r.status === 200, await r.text());
+r = await call("POST", "/api/races/2026-11-13", day);
+ok("日付が違う一覧は 400", r.status === 400);
+r = await call("POST", "/api/batch", { docs: [{ key: "races/2026-11-12/261112_19_09", body: detail }, { key: "stats/summary", body: stats },
+  { key: "index", body: index }, { key: "../etc", body: index }] });
+const rb = await r.json();
+ok("バッチ: 3件書けて1件は弾く (207)", r.status === 207 && rb.written === 3 && rb.errors.length === 1, JSON.stringify(rb));
+r = await call("GET", "/data/races/2026-11-12/261112_19_09.json");
+const got = await r.json();
+ok("詳細を読める", r.status === 200 && got.race.race_id === "261112_19_09");
+ok("Cache-Control は短い", r.headers.get("cache-control") === "public, max-age=15");
+ok("content-type は JSON", (r.headers.get("content-type") || "").startsWith("application/json"));
+r = await call("GET", "/data/index.json", undefined, null);
+ok("index を認証なしで読める", r.status === 200 && (await r.json()).dates[0] === "2026-11-12");
+r = await call("GET", "/data/stats/summary.json", undefined, null);
+ok("集計を読める", r.status === 200);
+r = await call("GET", "/data/races/2026-11-11.json", undefined, null);
+ok("無いものは 404", r.status === 404);
+r = await call("GET", "/api/index", undefined, null);
+ok("API に GET は 405", r.status === 405);
+r = await call("POST", "/api/batch", { docs: Array.from({ length: 51 }, () => ({ key: "index", body: index })) });
+ok("51件のバッチは 400", r.status === 400);
+r = await call("POST", "/api/prune", { before: "bad" });
+ok("prune の日付が違えば 400", r.status === 400);
+r = await call("GET", "/index.html", undefined, null);
+ok("画面は ASSETS に回す", r.status === 200 && (await r.text()) === "asset");
+document.getElementById("out").textContent = results.join("\n") + `\n${results.every((x) => x.startsWith("OK")) ? "ALL OK" : "FAILED"}`;
+</script>
