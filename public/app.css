@@ -282,3 +282,48 @@ th, td { padding: 6px 7px; }
 .pos { color: var(--hit); }
 .neg { color: #cf222e; }
 .chart line.axis { stroke: var(--muted); stroke-width: 1; }
+
+/* ─── トップ (2026-11-12): サマリ・会場と表示の切り替え・軽い1行・会場ごとのまとまり ─── */
+.day-sum { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .88rem; margin: 0 0 8px; }
+.ctrl { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+.ctrl select {
+  width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px;
+  background: var(--bg); color: var(--fg); font: inherit; font-size: .95rem;
+}
+.segs { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg {
+  display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 2px;
+  color: var(--fg); font-size: .88rem; white-space: nowrap; border-left: 1px solid var(--line);
+}
+.seg:first-child { border-left: 0; }
+.seg:hover { text-decoration: none; background: var(--card); }
+.seg.on { background: var(--fg); color: var(--bg); font-weight: 700; }
+.small-notice { font-size: .85rem; padding: 6px 10px; }
+.small-notice strong { margin: 0; }
+.small-notice details summary { cursor: pointer; color: var(--accent); margin-top: 2px; }
+.race-row {
+  display: block; color: inherit; border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; margin: 6px 0; background: var(--bg);
+}
+.race-row:hover { text-decoration: none; border-color: var(--accent); }
+.race-row.is-cancelled { opacity: .6; }
+.race-row .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.race-row .title { font-weight: 700; white-space: nowrap; }
+.race-row .time { color: var(--muted); }
+.race-row .right { margin-left: auto; display: flex; gap: 4px; flex: none; }
+.race-row .l2 { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: .86rem; color: var(--muted); margin-top: 4px; }
+.race-row .l2 > span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.race-row .l2 b { color: var(--fg); font-weight: 600; }
+.race-row .l3 { display: flex; align-items: center; gap: 6px; font-size: .86rem; margin-top: 4px; }
+.more { display: block; text-align: center; padding: 10px; margin: 6px 0; border: 1px dashed var(--line); border-radius: 10px; }
+.venue-group { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 0 8px; }
+.venue-group > summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; flex-wrap: wrap;
+}
+.venue-group > summary::-webkit-details-marker { display: none; }
+.venue-group > summary::before { content: "▸"; color: var(--muted); }
+.venue-group[open] > summary::before { content: "▾"; }
+.venue-group .vname { font-weight: 700; }
+.venue-group .vmeta b { color: var(--fg); }
+.venue-group > summary .badge { margin-left: auto; }
+.venue-group[open] { padding-bottom: 6px; }

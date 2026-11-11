@@ -109,11 +109,7 @@ async function pageIndex() {
 
   // 日付バー (画面下に固定)
   const i = dates.indexOf(date);
-  const go = (d, v = venue) => {
-    const p = new URLSearchParams({ date: d });
-    if (v) p.set("venue", v);
-    location.search = p.toString();
-  };
+  const go = (d) => (location.search = qs({ date: d }));          // 日付を変えたら会場・表示は既定に戻す
   document.body.insertAdjacentHTML("beforeend", `
     <nav class="datebar" aria-label="日付"><div class="inner">
       <button id="prev" ${i > 0 ? "" : "disabled"}>← 前日</button>
@@ -122,7 +118,7 @@ async function pageIndex() {
     </div></nav>`);
   $("#prev").onclick = () => go(dates[i - 1]);
   $("#next").onclick = () => go(dates[i + 1]);
-  $("#date-select").onchange = (e) => go(e.target.value, "");
+  $("#date-select").onchange = (e) => go(e.target.value);
 
   let day;
   try {
@@ -130,69 +126,126 @@ async function pageIndex() {
   } catch {
     return showEmpty(main, `${fmtDate(date)} のデータがありません`);
   }
-  const races = (day.races || []).slice().sort((a, b) => (a.close_at < b.close_at ? -1 : a.close_at > b.close_at ? 1 : a.race_id < b.race_id ? -1 : 1));
-  const venues = [...new Map(races.map((r) => [String(r.venue_id), r.venue_name])).entries()];
-  const shown = venue ? races.filter((r) => String(r.venue_id) === venue) : races;
-  const nPicks = races.reduce((s, r) => s + (r.picks?.count || 0), 0);
-
-  // 今日は「これから」(締切が近い順) を上、「締切済み」(新しい順) を下に。ほかの日は締切順
+  const races = (day.races || []).slice().sort(byClose);
   const now = Date.now();
   const isToday = date === todayJST();
-  const upcoming = isToday ? shown.filter((r) => new Date(r.close_at).getTime() > now) : shown;
-  const closed = isToday ? shown.filter((r) => new Date(r.close_at).getTime() <= now).reverse() : [];
-  const list = isToday
-    ? (upcoming.length ? `<h2 class="list-head">これから <span class="muted small">締切が近い順・${upcoming.length} レース</span></h2>${upcoming.map(raceCard).join("")}` : "")
-      + (closed.length ? `<h2 class="list-head">締切済み <span class="muted small">新しい順・${closed.length} レース</span></h2>${closed.map(raceCard).join("")}` : "")
-    : shown.map(raceCard).join("");
+  const isOpen = (r) => new Date(r.close_at).getTime() > now && !["finished", "cancelled"].includes(r.status);
+  const anyOpen = isToday && races.some(isOpen);
+
+  // 表示の種類と会場 (URL の view / venue)。今日でまだ締切前があれば「締切前」、それ以外は「全部」が既定
+  let view = q.get("view");
+  if (!VIEWS[view]) view = anyOpen ? "next" : "all";
+  const more = q.get("more") === "1";
+  const venues = [...new Map(races.map((r) => [String(r.venue_id), r.venue_name])).entries()];
+  const inVenue = venue ? races.filter((r) => String(r.venue_id) === venue) : races;
+  const pick = {
+    next: (r) => isOpen(r),
+    all: () => true,
+    picks: (r) => (r.picks?.count || 0) > 0,
+    results: (r) => r.status === "finished",
+  }[view];
+  const shown = inVenue.filter(pick);
+  const LIMIT = 10;
+
+  let list;
+  if (!shown.length) {
+    list = `<div class="empty">${view === "next" ? "締切前のレースはありません（「全部」「結果」で見られます）" : "該当するレースがありません"}</div>`;
+  } else if (view === "next") {
+    const head = more ? shown : shown.slice(0, LIMIT);
+    const rest = shown.length - head.length;
+    list = head.map((r) => raceRow(r)).join("")
+      + (rest > 0 ? `<a class="more" href="?${qs({ date, venue, view, more: "1" })}">残り ${rest} レースを表示</a>` : "");
+  } else if (!venue) {
+    // 全会場: 会場ごとに折りたたむ。開いておくのは次の締切が一番近い会場だけ
+    const nextOpen = races.filter(isOpen)[0];
+    list = venues.map(([id, name]) => {
+      const rs = shown.filter((r) => String(r.venue_id) === id);
+      if (!rs.length) return "";
+      const all = races.filter((r) => String(r.venue_id) === id);
+      const open = all.filter(isOpen);
+      const nPicks = all.reduce((a, r) => a + (r.picks?.count || 0), 0);
+      return `<details class="venue-group"${nextOpen && String(nextOpen.venue_id) === id ? " open" : ""}>
+        <summary>
+          <span class="vname">${esc(name)}</span>
+          <span class="vmeta muted small">${rs.length}R${isToday ? `・締切前 ${open.length}` : ""}${open.length ? `・次 <b class="num">${hhmm(open[0].close_at)}</b>` : ""}</span>
+          ${nPicks ? `<span class="badge pick">買 ${nPicks}</span>` : ""}
+        </summary>
+        ${rs.map((r) => raceRow(r, true)).join("")}
+      </details>`;
+    }).join("");
+  } else {
+    list = shown.map((r) => raceRow(r, true)).join("");
+  }
+
+  const viewSeg = Object.entries(VIEWS).map(([k, label]) =>
+    `<a class="seg${k === view ? " on" : ""}" href="?${qs({ date, venue, view: k })}" aria-pressed="${k === view}">${label}</a>`).join("");
+  const venueSel = `<select id="venue-select" aria-label="会場">
+      <option value="">全会場（${venues.length}場）</option>
+      ${venues.map(([id, name]) => {
+        const left = races.filter((r) => String(r.venue_id) === id && isOpen(r)).length;
+        return `<option value="${id}"${venue === id ? " selected" : ""}>${esc(name)}${isToday ? `（残り ${left}）` : ""}</option>`;
+      }).join("")}
+    </select>`;
 
   main.innerHTML = `
-    <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース${isToday ? "" : "・締切順"}</span></div>
-    <div class="chips" role="group" aria-label="会場で絞る">
-      <button class="chip" data-v="" aria-pressed="${!venue}">すべて</button>
-      ${venues.map(([id, name]) => `<button class="chip" data-v="${id}" aria-pressed="${venue === id}">${esc(name)}</button>`).join("")}
-    </div>
-    ${nPicks ? `<div class="notice">${PICKS_NOTICE}</div>` : ""}
-    <div id="races">${list || '<div class="empty">レースがありません</div>'}</div>`;
-  main.querySelectorAll(".chip").forEach((b) => (b.onclick = () => go(date, b.dataset.v)));
+    <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
+    ${daySummary(races, isToday, isOpen)}
+    <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
+    <div class="notice small-notice"><strong>picks は投票しておらず、どの買い方も回収率 100% 未満です（過去の試算）。</strong>
+      <details><summary>詳しく</summary>${PICKS_NOTICE}</details></div>
+    <div id="races">${list}</div>`;
+  $("#venue-select").onchange = (e) => (location.search = qs({ date, venue: e.target.value, view: q.get("view") || "" }));
 }
 
-function raceCard(r) {
+const VIEWS = { next: "締切前", all: "全部", picks: "picks", results: "結果" };
+const byClose = (a, b) => (a.close_at < b.close_at ? -1 : a.close_at > b.close_at ? 1 : a.race_id < b.race_id ? -1 : 1);
+/** 空の値を落として URL パラメータに */
+const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v)).toString();
+
+/** その日の状況 (予想済み・picks の成績・次の締切) */
+function daySummary(races, isToday, isOpen) {
+  const predicted = races.filter((r) => r.top_flag).length;
+  const pk = races.reduce((a, r) => {
+    const p = r.picks || {};
+    a.count += p.count || 0;
+    if (r.status === "finished" && p.count && p.hits != null) {
+      a.done += p.count; a.hits += p.hits; a.stake += p.stake || 0; a.payout += p.payout || 0;
+    }
+    return a;
+  }, { count: 0, done: 0, hits: 0, stake: 0, payout: 0 });
+  const next = isToday ? races.filter(isOpen)[0] : null;
+  const roi = pk.stake ? ` ・回収率 <b class="num">${pct(pk.payout / pk.stake)}</b>` : "";
+  return `<div class="day-sum">
+    <div><span class="muted">予想済み</span> <b class="num">${predicted}</b> / ${races.length}</div>
+    <div><span class="muted">picks</span> <b class="num">${pk.count}</b>点${pk.done ? `（結果 ${pk.done}点・的中 <b class="num">${pk.hits}</b>${roi}）` : ""}</div>
+    ${next ? `<div><span class="muted">次の締切</span> <a href="race.html?id=${encodeURIComponent(next.race_id)}&date=${dateFromRaceId(next.race_id)}">${esc(next.venue_name)} ${next.race_no}R <b class="num">${hhmm(next.close_at)}</b></a></div>` : ""}
+  </div>`;
+}
+
+/** 一覧の1レース (軽い版)。6艇は出さず、本命 (1着確率が最も高い艇) だけ。会場ごとにまとめた中では会場名を省く */
+function raceRow(r, inGroup = false) {
   const finished = r.status === "finished";
   const pk = r.picks || { count: 0 };
   const pickBadge = pk.count
-    ? `<span class="badge pick">買い目 ${pk.count}点${finished && pk.hits != null ? (pk.hits ? "・的中" : "・外れ") : ""}</span>` : "";
+    ? `<span class="badge pick">買${pk.count}${finished && pk.hits != null ? (pk.hits ? "◎" : "×") : ""}</span>` : "";
   const tf = r.top_flag, tt = r.top_trifecta;
-  const summary = (tf || tt) ? `<div class="summary">
-      ${tf ? `<span>展開 <b>${esc(tf.name)}</b> <span class="num">${pct(tf.prob)}</span> ${mark(tf.hit, "")}</span>` : ""}
-      ${tt ? `<span>3連単 <b class="num">${esc(tt.combo)}</b> <span class="num">${pct(tt.prob)}</span> ${mark(tt.hit, "")}</span>` : ""}
+  const fav = (r.entries || []).filter((e) => isNum(e.p_win)).sort((a, b) => b.p_win - a.p_win)[0];
+  const line2 = tf || tt || fav ? `<div class="l2">
+      ${tf ? `<span><b>${esc(tf.name)}</b> <span class="num">${pct(tf.prob, 0)}</span>${finished ? markShort(tf.hit) : ""}</span>` : ""}
+      ${fav ? `<span>本命 ${boat(fav.course)}<span class="num">${pct(fav.p_win, 0)}</span></span>` : ""}
+      ${tt ? `<span>3連単 <b class="num">${esc(tt.combo)}</b>${finished ? markShort(tt.hit) : ""}</span>` : ""}
+    </div>` : `<div class="l2 muted">予想前</div>`;
+  const res = finished && r.result ? `<div class="l3">
+      ${boats(r.result.arrival.slice(0, 3))} <span class="num">${yen(r.result.payout)}</span>
+      ${r.result.refunded ? '<span class="badge plain">返還</span>' : ""}
     </div>` : "";
-  const winner = finished && r.result ? r.result.arrival?.[0] : null;
-  const hasProb = (r.entries || []).some((e) => isNum(e.p_win));
-  const rows = (r.entries || []).map((e) => hasProb || finished ? `
-    <div class="entry-row${winner === e.course ? " is-win" : ""}">
-      ${boat(e.course)}
-      <span class="name">${esc(e.player_name)}</span>
-      <span class="cls">${esc(e.class || "")}</span>
-      ${isNum(e.p_win) ? bar(e.p_win) : "<span></span>"}
-      <span class="pct num">${isNum(e.p_win) ? pct(e.p_win) : ""}</span>
-      <span class="arr num">${finished ? arrivalText(e) : ""}</span>
-    </div>` : `
-    <div class="entry-row simple">${boat(e.course)}<span class="name">${esc(e.player_name)}</span><span class="cls">${esc(e.class || "")}</span></div>`).join("");
-  const res = finished && r.result ? `<div class="result-line">
-      <span class="muted">結果</span> ${boats(r.result.arrival.slice(0, 3))}
-      <span class="num">${esc(r.result.trifecta || "")}</span> <span class="num">${yen(r.result.payout)}</span>
-      ${r.result.refunded ? '<span class="badge plain">返還あり</span>' : ""}
-    </div>` : "";
-  const d = dateFromRaceId(r.race_id);
-  return `<a class="race-card${r.status === "cancelled" ? " is-cancelled" : ""}" href="race.html?id=${encodeURIComponent(r.race_id)}&date=${d}">
-    <div class="head">
-      <span class="title">${esc(r.venue_name)} ${r.race_no}R</span>
+  return `<a class="race-row${r.status === "cancelled" ? " is-cancelled" : ""}" href="race.html?id=${encodeURIComponent(r.race_id)}&date=${dateFromRaceId(r.race_id)}">
+    <div class="l1">
+      <span class="title">${inGroup ? "" : `${esc(r.venue_name)} `}${r.race_no}R</span>
       <span class="time num">${hhmm(r.close_at)}</span>
       <span class="right">${pickBadge}${badgeStatus(r.status)}</span>
     </div>
-    ${summary}
-    <div class="entries">${rows}</div>
-    ${res}
+    ${line2}${res}
   </a>`;
 }
 
