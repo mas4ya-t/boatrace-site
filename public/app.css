@@ -359,3 +359,35 @@ details.own > summary { display: flex; align-items: center; gap: 6px; }
 .mini:hover { text-decoration: none; border-color: var(--accent); }
 .mini-label { font-weight: 700; font-size: .9rem; margin-bottom: 2px; }
 .mini-row { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; font-size: .9rem; }
+
+/* ─── レース一覧: 会場のグリッド (24場、4列×6行) ─── */
+.vall {
+  display: block; text-align: center; padding: 8px; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); font-weight: 700; font-size: .92rem;
+}
+.vall.on, .vcell.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.vall:hover, .vcell:hover { text-decoration: none; }
+.vgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.vcell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 46px; padding: 2px;
+  border: 1px solid var(--line); border-radius: 8px; color: var(--fg); font-size: .88rem; font-weight: 600; line-height: 1.2;
+  text-align: center; overflow: hidden;
+}
+.vcell small { font-size: .68rem; font-weight: 400; color: var(--muted); white-space: nowrap; }
+.vcell.on small { color: var(--bg); opacity: .85; }
+.vcell.off { color: var(--muted); background: var(--card); opacity: .45; font-weight: 400; cursor: default; }
+
+/* ─── 基準との位置の印 (上位◯% / 平均的 / 下位◯%) ─── */
+.tag { display: inline-block; font-size: .68rem; line-height: 1.3; padding: 0 4px; border-radius: 4px; white-space: nowrap; font-family: inherit; }
+.tag.good2 { background: #1a7f37; color: #fff; }
+.tag.good { background: #dafbe1; color: #1a7f37; }
+.tag.mid { background: var(--card); color: var(--muted); }
+.tag.bad { background: #ffebe9; color: #cf222e; }
+.tag.bad2 { background: #cf222e; color: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tag.good { background: #12261e; color: #3fb950; }
+  :root:not([data-theme="light"]) .tag.bad { background: #2d1214; color: #f85149; }
+}
+td.vc > div { white-space: nowrap; }
+td.vc .tag { margin-top: 2px; }
+td.vc.best > div { font-weight: 700; color: var(--accent); }

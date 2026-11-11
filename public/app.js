@@ -233,23 +233,29 @@ async function pageRaces() {
 
   const viewSeg = Object.entries(VIEWS).map(([k, label]) =>
     `<a class="seg${k === view ? " on" : ""}" href="?${qs({ date, venue, view: k })}" aria-pressed="${k === view}">${label}</a>`).join("");
-  const venueSel = `<select id="venue-select" aria-label="会場">
-      <option value="">全会場（${venues.length}場）</option>
-      ${venues.map(([id, name]) => {
-        const left = races.filter((r) => String(r.venue_id) === id && isOpen(r)).length;
-        return `<option value="${id}"${venue === id ? " selected" : ""}>${esc(name)}${isToday ? `（残り ${left}）` : ""}</option>`;
-      }).join("")}
-    </select>`;
+  const held = new Map(venues);
+  const cell = (id) => {
+    const name = VENUE_NAMES[Number(id) - 1];
+    if (!held.has(id)) return `<span class="vcell off" aria-disabled="true">${name}</span>`;
+    const rs = races.filter((r) => String(r.venue_id) === id);
+    const left = rs.filter(isOpen);
+    const meta = isToday ? (left.length ? `残${left.length}・${hhmm(left[0].close_at)}` : "終了") : `${rs.length}R`;
+    return `<a class="vcell${venue === id ? " on" : ""}" href="?${qs({ date, venue: id, view: q.get("view") || "" })}" aria-pressed="${venue === id}">
+      ${name}<small class="num">${meta}</small></a>`;
+  };
+  const venueGrid = `<a class="vall${venue ? "" : " on"}" href="?${qs({ date, view: q.get("view") || "" })}" aria-pressed="${!venue}">全会場（${venues.length}場）</a>
+    <div class="vgrid" role="group" aria-label="会場">${VENUE_NAMES.map((_, i) => cell(String(i + 1).padStart(2, "0"))).join("")}</div>`;
 
   main.innerHTML = `
     <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
     ${daySummary(races, isToday, isOpen)}
-    <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
+    <div class="ctrl">${venueGrid}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
     <div id="races">${list}</div>`;
-  $("#venue-select").onchange = (e) => (location.search = qs({ date, venue: e.target.value, view: q.get("view") || "" }));
 }
 
 const VIEWS = { next: "締切前", all: "全部", picks: "picks", results: "結果" };
+const VENUE_NAMES = ["桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑", "津", "三国", "びわこ", "住之江",
+  "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", "下関", "若松", "芦屋", "福岡", "唐津", "大村"];   // 場コード 01〜24 の順
 const byClose = (a, b) => (a.close_at < b.close_at ? -1 : a.close_at > b.close_at ? 1 : a.race_id < b.race_id ? -1 : 1);
 /** 空の値を落として URL パラメータに */
 const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v)).toString();
@@ -318,7 +324,7 @@ async function pageRace() {
   if (!id || !date) return (main.innerHTML = back + '<div class="empty">データがありません</div>');
   let d;
   try {
-    d = await getJSON(`data/races/${date}/${encodeURIComponent(id)}.json`);
+    [d, BASE] = await Promise.all([getJSON(`data/races/${date}/${encodeURIComponent(id)}.json`), getJSON("baselines.json").catch(() => null)]);
   } catch {
     return (main.innerHTML = back + '<div class="empty">データがありません</div>');
   }
@@ -353,6 +359,45 @@ function flagsSection(r) {
   return `<h2>展開の確率（上位5）</h2><div class="prob-list">${rows}</div>`;
 }
 
+/** 分位点 (0,5,…,100%) から、v が全体の何割の位置か (0〜1) */
+function pctile(v, dist) {
+  const q = dist?.q;
+  if (!isNum(v) || !q || q.length < 2) return null;
+  if (v <= q[0]) return 0;
+  if (v >= q[q.length - 1]) return 1;
+  for (let i = 1; i < q.length; i++) {
+    if (v <= q[i]) {
+      const f = q[i] === q[i - 1] ? 0.5 : (v - q[i - 1]) / (q[i] - q[i - 1]);
+      return (i - 1 + f) / (q.length - 1);
+    }
+  }
+  return 1;
+}
+
+/** 全体の中での位置の印 (上位◯% / 平均的 / 下位◯%)。higher = 大きいほど良い */
+function posTag(v, dist, higher, note = "") {
+  const p = pctile(v, dist);
+  if (p == null) return "";
+  const g = higher ? p : 1 - p;
+  const title = `全体の${higher ? "大きい" : "小さい"}ほうから${Math.round((1 - g) * 100)}%の位置（平均 ${dist.mean}${note ? "・" + note : ""}）`;
+  if (g >= 0.7) return `<span class="tag ${g >= 0.9 ? "good2" : "good"}" title="${esc(title)}">上位${Math.max(1, Math.round((1 - g) * 100))}%</span>`;
+  if (g <= 0.3) return `<span class="tag ${g <= 0.1 ? "bad2" : "bad"}" title="${esc(title)}">下位${Math.max(1, Math.round(g * 100))}%</span>`;
+  return `<span class="tag mid" title="${esc(title)}">平均的</span>`;
+}
+
+/** 確率とコースの実際の率との差 (pt)。±5pt 以上で色を付ける */
+function diffTag(p, base, label) {
+  if (!isNum(p) || !isNum(base)) return "";
+  const d = (p - base) * 100;
+  const cls = d >= 10 ? "good2" : d >= 5 ? "good" : d <= -10 ? "bad2" : d <= -5 ? "bad" : "mid";
+  return `<span class="tag ${cls}" title="${esc(label)} ${pct(base, 0)} との差">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(0)}pt</span>`;
+}
+
+/** 値と印を縦に並べたセル */
+const vcell = (html, tag, cls = "") => `<td class="r num vc${cls ? " " + cls : ""}"><div>${html}</div>${tag || ""}</td>`;
+
+let BASE = null;   // baselines.json (レース詳細で読む)
+
 function entriesSection(r) {
   const es = r.entries || [];
   const pred = r.entry?.predicted;                                   // 予測した進入 (例 "132456")
@@ -360,21 +405,27 @@ function entriesSection(r) {
   const best = Math.max(...es.map((e) => (isNum(e.p_win) ? e.p_win : -1)));
   const finished = r.status === "finished";
   const pctOfficial = (x) => (isNum(x) ? `${x.toFixed(1)}` : "—");     // 公式の 2連対率は 0〜100 の値
+  const B = BASE || {};
+  const times = es.map((e) => e.exhibition?.time).filter(isNum);
+  const fastest = times.length ? Math.min(...times) : null;
+  const ov = (k) => B.overall?.[k];
   const rows = es.map((e) => {
     const o = e.official || {}, ex = e.exhibition || {}, s = e.stats || {};
     const c = courseOf(e.course);
+    const cc = String(c || e.course);
     return `<tr class="${e.hit_win ? "is-hit" : ""}">
       <th class="sticky"><div class="who">${boat(e.course)}<span class="pname">${esc(e.player_name)}</span></div>
         <div class="faint small">${esc(e.class || "")}${isNum(e.age) ? ` ${e.age}歳` : ""}${isNum(e.weight) ? ` ${e.weight.toFixed(1)}kg` : ""}</div></th>
       ${finished ? `<td class="r num"><b>${arrivalText(e)}</b></td>` : ""}
-      <td class="r num${e.p_win === best && best > 0 ? " best" : ""}">${pct(e.p_win)}</td>
-      <td class="r num">${pct(e.p_top3)}</td>
+      ${vcell(pct(e.p_win), diffTag(e.p_win, B.win_rate_by_course?.[cc], `${cc}コースの実際の1着率`), e.p_win === best && best > 0 ? "best" : "")}
+      ${vcell(pct(e.p_top3), diffTag(e.p_top3, B.top3_rate_by_course?.[cc], `${cc}コースの実際の3着内率`))}
       <td class="r num">${c ? `${c}${c !== e.course ? '<span class="moved" title="艇番と違うコース">*</span>' : ""}` : "—"}</td>
-      <td class="r num">${isNum(ex.time) ? ex.time.toFixed(2) : "—"}${isNum(ex.rank) ? `<span class="faint">(${ex.rank})</span>` : ""}</td>
-      <td class="r num">${fix(o.national_win_rate, 2)}</td>
-      <td class="r num">${fix(o.local_win_rate, 2)}</td>
-      <td class="r num">${pctOfficial(o.motor_2rate)}</td>
-      <td class="r num${s.sigma_imputed ? " low" : ""}">${fix(s.sigma, 3)}</td>
+      ${vcell(isNum(ex.time) ? `${ex.time.toFixed(2)}${isNum(ex.rank) ? `<span class="faint">(${ex.rank})</span>` : ""}` : "—",
+        isNum(ex.time) && isNum(fastest) ? posTag(ex.time - fastest, ov("exh_delay"), false, "レース最速との差") : "")}
+      ${vcell(fix(o.national_win_rate, 2), o.national_win_rate ? posTag(o.national_win_rate, ov("national_win_rate"), true) : "")}
+      ${vcell(fix(o.local_win_rate, 2), o.local_win_rate ? posTag(o.local_win_rate, ov("local_win_rate"), true) : "")}
+      ${vcell(pctOfficial(o.motor_2rate), o.motor_2rate ? posTag(o.motor_2rate, ov("motor_2rate"), true) : "")}
+      ${vcell(fix(s.sigma, 3), s.sigma_imputed ? '<span class="tag mid">平均値</span>' : posTag(s.sigma, ov("sigma"), false), s.sigma_imputed ? "low" : "")}
     </tr>`;
   }).join("");
   const entryLine = r.entry ? `<div class="muted small">進入: 展示 <b class="num">${esc(r.entry.exhibition || "なし")}</b> → 予測 <b class="num">${esc(r.entry.predicted)}</b>
@@ -384,48 +435,92 @@ function entriesSection(r) {
         <th class="r">予測<br>コース</th><th class="r">展示<br>(順位)</th><th class="r">全国<br>勝率</th><th class="r">当地<br>勝率</th>
         <th class="r">モーター<br>2連%</th><th class="r">ST の<br>ばらつき σ</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
-    <div class="faint small">1着・3着内はモデルの確率（太字が最も高い艇）。横にスクロールできます。σ が大きいほどスタートが安定しない（薄い字は出走30未満で平均値）。</div>`;
-  const own = es.filter((e) => e.stats).map((e) => `<details class="own"><summary>${boat(e.course)} ${esc(e.player_name)}</summary>
-      ${ownStats(courseOf(e.course) || e.course, e.stats)}</details>`).join("");
-  return `<h2>出走表</h2>${entryLine}${table}${own ? `<h3>独自集計（直近1年）</h3>${own}` : ""}`;
+    <div class="faint small">1着・3着内はモデルの確率（太字が最も高い艇）と、そのコースの実際の率（1コース ${pct(B.win_rate_by_course?.["1"], 0)}・6コース ${pct(B.win_rate_by_course?.["6"], 0)} など）との差。
+      ほかの印は、全選手（直近2年）の中での位置（上位◯%は良いほう）。σ は小さいほどスタートが安定（平均 ${B.overall?.sigma?.mean ?? "—"}）。
+      展示はレース最速との差で比べる。横にスクロールできます。</div>`;
+  return `<h2>出走表</h2>${entryLine}${table}${ownTables(es, courseOf)}`;
 }
 
-/** 独自集計 (直近365日・当日を含まない)。出走数が少ないものは薄くして出走数を添える */
-function ownStats(course, s) {
-  const runs = (n) => `<span class="faint num">(${int(n)}走)</span>`;
-  const low = (n) => (isNum(n) && n < LOW_RUNS ? " low" : "");
-  const mc = s.my_course, se = s.series;
-  const sigma = isNum(s.sigma) ? `<span><span class="k">ST のばらつき σ</span> <span class="num${s.sigma_imputed ? " low" : ""}">${s.sigma.toFixed(3)}</span>${s.sigma_imputed ? ' <span class="faint">(出走30未満のため平均値)</span>' : ""}</span>` : "";
-  const myc = mc ? `<div class="section-label">${course}コース（予測した進入コース）の成績 ${runs(mc.run_cnt)}</div>
-    <div class="grid2${low(mc.run_cnt)}">
-      <span><span class="k">1着率</span> <span class="num">${pct(mc["1st_rate"])}</span></span>
-      <span><span class="k">3連対率</span> <span class="num">${pct(mc["3ren_rate"])}</span></span>
-      <span><span class="k">平均ST</span> <span class="num">${fix(mc.st_avg, 2)}</span></span>
-    </div>` : "";
-  // 節の出走数はもともと少ない (数走) ので薄くはしない。出走数だけ添える
-  const ser = se ? `<div class="section-label">この節（前日まで） ${runs(se.run_cnt)}</div>
-    <div class="grid2">
-      <span><span class="k">平均着順</span> <span class="num">${fix(se.avg_rank, 2)}</span></span>
-      <span><span class="k">平均ST</span> <span class="num">${fix(se.avg_st, 2)}</span></span>
-    </div>` : "";
-  const pat = (s.pattern || []).length ? `<div class="section-label">${course === 1 ? "1コースでの決まり手（やられる側）" : "このコースでの決まり手（やる側）と、1コースが逃げたときの着"}</div>
-    <div class="grid2">${s.pattern.map((p) => `<span class="${low(p.run_cnt).trim()}"><span class="k">${esc(p.label)}</span> <span class="num">${pct(p.value)}</span>${isNum(p.run_cnt) && p.run_cnt < LOW_RUNS ? " " + runs(p.run_cnt) : ""}</span>`).join("")}</div>` : "";
-  // 展開別に勝ったときの相手。win_partners が無い古いデータは nige_partners (1号艇の逃げだけ) で出す
+/** 独自集計 (直近365日・当日を含まない) を表に。コースの成績・節 / 決まり手 / 展開別に勝ったときの相手 (艇ごと) */
+const PATTERN_COLS = [
+  ["nige_vs_nigashi", "逃げ率", "逃し率", "逃げ／逃し"],
+  ["sasare_vs_sashi", "差され率", "差し率", "差し"],
+  ["makurare_vs_makuri", "まくられ率", "まくり率", "まくり"],
+  ["makurizasare_vs_makurizashi", "まくり差され率", "まくり差し率", "まくり差し"],
+  ["nige_vs_chase_2nd", null, "1コースが逃げたときの2着率", "逃げ時2着"],
+  ["nige_vs_chase_3rd", null, "1コースが逃げたときの3着率", "逃げ時3着"],
+];
+const OLD_LABELS = { "1号艇が逃げたときの2着率": "1コースが逃げたときの2着率", "1号艇が逃げたときの3着率": "1コースが逃げたときの3着率" };
+
+function ownTables(es, courseOf) {
+  const withStats = es.filter((e) => e.stats);
+  if (!withStats.length) return "";
+  const B = BASE || {};
+  const who = (e) => `<th class="sticky"><div class="who">${boat(e.course)}<span class="pname">${esc(e.player_name)}</span></div></th>`;
+  const lowCls = (n) => (isNum(n) && n < LOW_RUNS ? "low" : "");
+
+  const rowsA = withStats.map((e) => {
+    const s = e.stats, mc = s.my_course || {}, se = s.series || {};
+    const c = String(courseOf(e.course) || e.course);
+    const bc = (k) => B.by_course?.[k]?.[c];
+    const hasSe = (se.run_cnt || 0) > 0;
+    return `<tr>${who(e)}<td class="r num">${c}</td>
+      ${vcell(pct(mc["1st_rate"]), mc.run_cnt ? posTag(mc["1st_rate"], bc("my_course_1st_rate"), true, `${c}コース`) : "", lowCls(mc.run_cnt))}
+      ${vcell(pct(mc["3ren_rate"]), mc.run_cnt ? posTag(mc["3ren_rate"], bc("my_course_3ren_rate"), true, `${c}コース`) : "", lowCls(mc.run_cnt))}
+      ${vcell(fix(mc.st_avg, 2), isNum(mc.st_avg) ? posTag(mc.st_avg, bc("my_course_st_avg"), false, `${c}コース`) : "", lowCls(mc.run_cnt))}
+      <td class="r num ${lowCls(mc.run_cnt)}">${int(mc.run_cnt)}</td>
+      ${vcell(hasSe ? fix(se.avg_rank, 2) : "—", hasSe ? posTag(se.avg_rank, B.overall?.series_avg_rank, false) : "")}
+      ${vcell(hasSe ? fix(se.avg_st, 2) : "—", hasSe && isNum(se.avg_st) ? posTag(se.avg_st, B.overall?.series_avg_st, false) : "")}
+      <td class="r num">${int(se.run_cnt || 0)}</td></tr>`;
+  }).join("");
+  const tableA = `<h3>コースと節の成績</h3>
+    <div class="table-wrap entry-table"><table>
+      <thead><tr><th class="sticky">艇・選手</th><th class="r">予測<br>コース</th><th class="r">そのコースの<br>1着率</th><th class="r">3連対率</th>
+        <th class="r">平均ST</th><th class="r">出走</th><th class="r">節の<br>平均着順</th><th class="r">節の<br>平均ST</th><th class="r">節の<br>出走</th></tr></thead>
+      <tbody>${rowsA}</tbody></table></div>
+    <div class="faint small">直近1年（当日を含まない）。そのコースの成績は、同じコースに入った全選手の中での位置。出走 ${LOW_RUNS} 未満は薄く表示（当てにならない）。節は前日まで。</div>`;
+
+  const rowsB = withStats.map((e) => {
+    const s = e.stats;
+    const c = String(courseOf(e.course) || e.course);
+    const byLabel = Object.fromEntries((s.pattern || []).map((p) => [OLD_LABELS[p.label] || p.label, p]));
+    const cells = PATTERN_COLS.map(([col, l1, lOut]) => {
+      const p = byLabel[c === "1" ? l1 : lOut];
+      if (!p || (c === "1" && !l1)) return `<td class="r faint">—</td>`;
+      const dist = B.patterns?.[col]?.[c];
+      return vcell(pct(p.value), dist ? posTag(p.value, dist, dist.higher, `${c}コース`) : "", lowCls(p.run_cnt));
+    }).join("");
+    return `<tr>${who(e)}<td class="r num">${c}</td>${cells}</tr>`;
+  }).join("");
+  const tableB = `<h3>決まり手</h3>
+    <div class="table-wrap entry-table"><table>
+      <thead><tr><th class="sticky">艇・選手</th><th class="r">予測<br>コース</th>${PATTERN_COLS.map(([, , , h]) => `<th class="r">${h}</th>`).join("")}</tr></thead>
+      <tbody>${rowsB}</tbody></table></div>
+    <div class="faint small">1コースの艇は「逃げ率」と、差され・まくられ・まくり差されの率（やられる側。低いほど良い）。
+      2〜6コースの艇は「逃し率」（そのコースにいて1コースに逃げられた率。低いほど良い）と、差し・まくり・まくり差しで勝った率、1コースが逃げたときに2着・3着に来た率。
+      印は同じコースの全選手の中での位置。</div>`;
+
+  const partners = withStats.map((e) => {
+    const html = partnersHtml(e.stats);
+    return html ? `<details class="own"><summary>${boat(e.course)} ${esc(e.player_name)}</summary>${html}</details>` : "";
+  }).join("");
+  return `<h2>独自集計（直近1年）</h2>${tableA}${tableB}${partners ? `<h3>展開別に勝ったときの相手</h3>${partners}` : ""}`;
+}
+
+/** 展開別に勝ったとき、2着・3着に来たコース (艇ごと)。win_partners が無い古いデータは nige_partners (1逃げだけ) で出す */
+function partnersHtml(s) {
   const wp = (s.win_partners && s.win_partners.length) ? s.win_partners
     : s.nige_partners ? [{ development: "1逃げ", ...s.nige_partners }] : [];
+  if (!wp.length) return "";
   const partnerTable = (p) => `<div class="partner-head">${esc(p.development)}で勝ったとき <span class="faint num">(${int(p.wins)}回)</span></div>
     ${p.wins ? `<div class="table-wrap partners${p.wins < LOW_WINS ? " low" : ""}"><table>
-      <thead><tr><th></th>${p.second.map((x) => `<th class="r">${boat(x.course)}</th>`).join("")}</tr></thead>
+      <thead><tr><th></th>${p.second.map((x) => `<th class="r">${x.course}コース</th>`).join("")}</tr></thead>
       <tbody>
         <tr><td class="muted">2着</td>${p.second.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
         <tr><td class="muted">3着</td>${p.third.map((x) => `<td class="r num">${pct(x.rate, 0)}</td>`).join("")}</tr>
       </tbody></table></div>` : ""}`;
-  const partners = wp.length ? `<div class="section-label">勝ったとき、2着・3着に来たコース（展開別）</div>
-    ${wp.map(partnerTable).join("")}
-    <div class="faint small">この選手がその展開で勝ったレースのうち、2着・3着がそのコースだった割合。
-      1〜2コース以外の展開は年に数回しか起きないので、${LOW_WINS}回未満は薄く表示しています（偶然の影響が大きい）。</div>` : "";
-  return `<div class="grid2">${sigma}</div>${myc}${ser}${pat}${partners}
-    <div class="faint small">出走 ${LOW_RUNS} 未満の率は当てにならないので薄く表示しています。</div>`;
+  return `${wp.map(partnerTable).join("")}
+    <div class="faint small">この選手がその展開で勝ったレースのうち、2着・3着がそのコースだった割合。${LOW_WINS}回未満は薄く表示（偶然の影響が大きい）。</div>`;
 }
 
 function trifectaSection(r) {
