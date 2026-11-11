@@ -4,12 +4,6 @@
 
 // ─── 文言 ───────────────────────────────────────────────────────────────────
 
-const PICKS_NOTICE = `
-  <strong>picks は実際に投票しているものではありません。</strong>
-  条件に合う買い目を1点100円として記録しているだけです（鑑賞用も検証用も同じ）。
-  過去の検証では、どの買い方も回収率 100% を超えると言える条件は見つかっていません（確定オッズでの試算でも 90〜94%）。
-  買うと損をする可能性が高いことに注意してください。`;
-
 const GROUPS = [
   { id: "fun", title: "鑑賞用の買い方", note: "確率と展開の性格で選ぶ、見て楽しむための買い方。成績の判定には使いません。" },
   { id: "verify", title: "検証用の買い方", note: "期待値（確率 × オッズ）で選ぶ買い方。成績の判定に使います。" },
@@ -83,17 +77,77 @@ function arrivalText(e) {
 // ─── ヘッダ ─────────────────────────────────────────────────────────────────
 
 function header(active) {
-  const nav = [["index", "index.html", "レース"], ["stats", "stats.html", "成績"]]
+  const nav = [["home", "index.html", "ホーム"], ["races", "races.html", "レース"], ["stats", "stats.html", "成績"]]
     .map(([k, href, label]) => `<a href="${href}"${k === active ? ' aria-current="page"' : ""}>${label}</a>`).join("");
   return `<header class="site-header"><div class="inner"><a class="brand" href="index.html">ボートレース予想</a><nav>${nav}</nav></div></header>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 1. トップ (index.html): 日付を選んでレース一覧。一覧 JSON だけで描く
+// 0. ホーム (index.html): 今日の様子と、もうすぐ締切・混戦・的中・鑑賞用の成績
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function pageIndex() {
-  document.body.insertAdjacentHTML("afterbegin", header("index"));
+async function pageHome() {
+  // 以前のトップ (index.html?date=…) の共有リンクはレース一覧へ
+  if (/[?&](date|venue|view)=/.test(location.search)) return location.replace(`races.html${location.search}`);
+  document.body.insertAdjacentHTML("afterbegin", header("home"));
+  const main = $("main");
+  let index;
+  try {
+    index = await getJSON("data/index.json");
+  } catch {
+    return showEmpty(main);
+  }
+  const date = index.latest_date;
+  if (!date) return showEmpty(main, "まだレースのデータがありません");
+  const [day, fun] = await Promise.all([getJSON(`data/races/${date}.json`).catch(() => null),
+    getJSON("data/stats/fun.json").catch(() => null)]);
+  const races = (day?.races || []).slice().sort(byClose);
+  const now = Date.now();
+  const isToday = date === todayJST();
+  const isOpen = (r) => new Date(r.close_at).getTime() > now && !["finished", "cancelled"].includes(r.status);
+  const open = isToday ? races.filter(isOpen) : [];
+
+  const soon = open.slice(0, 3);
+  // 混戦: 展開1位の確率が低い (展開が割れている) レース。締切前があればその中から
+  const pool = (open.length ? open : races).filter((r) => r.top_flag && isNum(r.top_flag.prob));
+  const close = pool.slice().sort((a, b) => a.top_flag.prob - b.top_flag.prob).slice(0, 3);
+  const hits = races.filter((r) => r.top_trifecta?.hit && r.result).sort((a, b) => (b.result.payout || 0) - (a.result.payout || 0)).slice(0, 3);
+
+  const section = (title, sub, body, link = "") =>
+    `<section class="home-sec"><h2>${title}${sub ? ` <span class="muted small">${sub}</span>` : ""}</h2>${body}${link}</section>`;
+  const funCardsMini = fun && fun.rows?.length ? `<div class="mini-grid">${fun.rows.map((r) => `
+      <a class="mini" href="stats.html#fun">
+        <div class="mini-label">${esc(r.rule)}</div>
+        ${r.races ? `<div class="mini-row"><span class="muted small">的中率</span><b class="num">${pct(r.race_hit_rate, 0)}</b></div>
+          <div class="mini-row"><span class="muted small">最高</span><b class="num">${r.max_payout == null ? "—" : yen(r.max_payout)}</b></div>
+          <div class="mini-row"><span class="muted small">連続ハズレ</span><b class="num">${int(r.current_streak)}</b></div>`
+        : `<div class="faint small">記録中</div>`}
+      </a>`).join("")}</div>` : `<div class="empty">記録中</div>`;
+
+  main.innerHTML = `
+    <section class="hero">
+      <h1>ボートレース予想</h1>
+      <p class="muted">全場・全レースの展開と3連単の確率を、締切12分前に予想しています。</p>
+    </section>
+    <section class="home-sec today">
+      <h2>${isToday ? "今日" : "最新"} <span class="muted small">${fmtDate(date)}</span></h2>
+      ${races.length ? daySummary(races, isToday, isOpen) : '<div class="muted">データがありません</div>'}
+      <a class="btn" href="races.html?date=${date}">レース一覧を見る</a>
+    </section>
+    ${soon.length ? section("もうすぐ締切", "", soon.map((r) => raceRow(r)).join(""),
+      `<a class="more" href="races.html?date=${date}&view=next">締切前のレースをすべて見る</a>`) : ""}
+    ${close.length ? section("混戦になりそうなレース", "展開1位の確率が低い順", close.map((r) => raceRow(r)).join("")) : ""}
+    ${section(isToday ? "今日の的中" : "この日の的中", "3連単1位が当たったレース", hits.length ? hits.map((r) => raceRow(r)).join("")
+      : '<div class="empty">まだありません</div>')}
+    ${section("鑑賞用の買い方", fun?.period ? esc(fun.period) : "", funCardsMini, '<a class="more" href="stats.html">成績を見る</a>')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. レース一覧 (races.html): 日付を選んでレース一覧。一覧 JSON だけで描く
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function pageRaces() {
+  document.body.insertAdjacentHTML("afterbegin", header("races"));
   const main = $("main");
   let index;
   try {
@@ -191,8 +245,6 @@ async function pageIndex() {
     <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
     ${daySummary(races, isToday, isOpen)}
     <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
-    <div class="notice small-notice"><strong>picks は投票しておらず、どの買い方も回収率 100% 未満です（過去の試算）。</strong>
-      <details><summary>詳しく</summary>${PICKS_NOTICE}</details></div>
     <div id="races">${list}</div>`;
   $("#venue-select").onchange = (e) => (location.search = qs({ date, venue: e.target.value, view: q.get("view") || "" }));
 }
@@ -262,7 +314,7 @@ async function pageRace() {
   const q = params();
   const id = q.get("id");
   const date = q.get("date") || dateFromRaceId(id);
-  const back = `<a class="back" href="index.html?date=${encodeURIComponent(date || "")}">← ${date ? fmtDate(date) : ""}の一覧</a>`;
+  const back = `<a class="back" href="races.html?date=${encodeURIComponent(date || "")}">← ${date ? fmtDate(date) : ""}の一覧</a>`;
   if (!id || !date) return (main.innerHTML = back + '<div class="empty">データがありません</div>');
   let d;
   try {
@@ -429,7 +481,7 @@ function picksSection(r, rules) {
     return `<h2>${g.title}</h2><div class="muted small">${g.note} 判定 = 判定に使ったオッズを取った時点（締切の何分前か）。</div>
       ${rs.map(ruleBlock).join("")}`;
   }).join("");
-  return `${groups}<div class="notice">${PICKS_NOTICE}</div>`;
+  return groups;
 }
 
 function resultSection(r) {
@@ -505,10 +557,9 @@ function statsBlock(f, isSummary, isFun = false) {
   const charts = (f.charts || []).map((c) => (c.unit === "yen" ? barChart(f, c) : lineChart(f, c))).join("");
   const findings = (f.findings || []).length ? `<h3>読み取れたこと</h3><ul class="findings">${f.findings.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
   const sup = (f.superseded || []).map((x) => `<div class="superseded"><b>訂正</b> ${esc(x)}</div>`).join("");
-  const notice = isSummary || isFun ? `<div class="notice"><strong>${esc(f.note || "")}</strong>${PICKS_NOTICE.replace(/<strong>.*?<\/strong>/s, "")}</div>` : "";
   return `<details class="stats-block" id="${esc(f.id)}"${isSummary || isFun || f.id === "fun_monthly" ? " open" : ""}>
     <summary>${esc(f.title)}</summary>
-    ${meta}${kinds}${table}${notice}${charts}${findings}${sup}
+    ${meta}${kinds}${table}${charts}${findings}${sup}
   </details>`;
 }
 
@@ -642,7 +693,7 @@ function barChart(f, c) {
 
 // ─── 起動 ───────────────────────────────────────────────────────────────────
 
-const PAGES = { index: pageIndex, race: pageRace, stats: pageStats };
+const PAGES = { home: pageHome, races: pageRaces, race: pageRace, stats: pageStats };
 document.addEventListener("DOMContentLoaded", () => {
   const page = PAGES[document.body.dataset.page];
   if (page) page().catch((e) => { console.error(e); showEmpty($("main")); });
