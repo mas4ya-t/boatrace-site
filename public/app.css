@@ -327,3 +327,17 @@ th, td { padding: 6px 7px; }
 .venue-group .vmeta b { color: var(--fg); }
 .venue-group > summary .badge { margin-left: auto; }
 .venue-group[open] { padding-bottom: 6px; }
+
+/* ─── レース詳細: 出走表 (表) ─── */
+.entry-table table { min-width: 560px; }
+.entry-table th, .entry-table td { padding: 6px 6px; vertical-align: middle; }
+.entry-table thead th { font-size: .75rem; line-height: 1.2; }
+.entry-table .sticky { position: sticky; left: 0; z-index: 1; background: var(--bg); text-align: left; min-width: 7.5em; max-width: 9.5em; }
+.entry-table thead .sticky { z-index: 2; background: var(--card); }
+.entry-table tr.is-hit .sticky { background: var(--hit-bg); }
+.entry-table .who { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.entry-table .pname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-table td.best { font-weight: 700; color: var(--accent); }
+.moved { color: #bc4c00; font-weight: 700; margin-left: 1px; }
+.low { opacity: .55; }
+details.own > summary { display: flex; align-items: center; gap: 6px; }
