@@ -5,8 +5,22 @@
    "description": "強度 (LightGBM) の寄与を展開確率で重み付けして足したもの。定数項は全艇共通なので含めない。",
    "properties": {
     "course": {
+     "description": "艇番",
      "title": "Course",
      "type": "integer"
+    },
+    "entry_course": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "予測した進入コース (モデルの中ではこのコースの位置で計算している)",
+     "title": "Entry Course"
     },
     "base": {
      "anyOf": [
@@ -18,7 +32,7 @@
       }
      ],
      "default": null,
-     "description": "艇番 (course) による分。説明には使わない",
+     "description": "進入コース (course 列) による分。説明には使わない",
      "title": "Base"
     },
     "residual": {
@@ -282,6 +296,41 @@
     "official"
    ],
    "title": "Entry",
+   "type": "object"
+  },
+  "EntryInfo": {
+   "additionalProperties": false,
+   "description": "進入。モデルは予測した進入コースの順に6艇を並べて予想する (確率は艇番に戻してある)。",
+   "properties": {
+    "exhibition": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "展示進入 (コース1〜6の艇番の並び、例 132456)。取れなければ null",
+     "title": "Exhibition"
+    },
+    "predicted": {
+     "description": "予測した進入 (同じ形式)。展示進入が取れなければ枠なり 123456",
+     "title": "Predicted",
+     "type": "string"
+    },
+    "source": {
+     "description": "予測の出どころ",
+     "title": "Source",
+     "type": "string"
+    }
+   },
+   "required": [
+    "predicted",
+    "source"
+   ],
+   "title": "EntryInfo",
    "type": "object"
   },
   "EntryStats": {
@@ -764,14 +813,45 @@
      "type": "string"
     },
     "odds": {
-     "title": "Odds",
-     "type": "number"
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "判定に使ったオッズ (締切前)。オッズを使わない鑑賞用で、まだ取っていなければ null",
+     "title": "Odds"
     },
     "ev": {
-     "title": "Ev",
-     "type": "number"
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Ev"
+    },
+    "prob": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "モデルの確率",
+     "title": "Prob"
     },
     "rule": {
+     "description": "ルールの id (pick_rules)。2026-11-11 までの記録は条件の文字列 (odds<=10 & ev>1 = steady)",
      "title": "Rule",
      "type": "string"
     },
@@ -833,12 +913,55 @@
    },
    "required": [
     "combo",
-    "odds",
-    "ev",
     "rule",
     "stake"
    ],
    "title": "Pick",
+   "type": "object"
+  },
+  "PickRule": {
+   "additionalProperties": false,
+   "description": "picks のルール (predict/picks.py)。group: verify = 検証用 (期待値ベース、成績の判定に使う) / fun = 鑑賞用。",
+   "properties": {
+    "id": {
+     "title": "Id",
+     "type": "string"
+    },
+    "group": {
+     "enum": [
+      "verify",
+      "fun"
+     ],
+     "title": "Group",
+     "type": "string"
+    },
+    "label": {
+     "title": "Label",
+     "type": "string"
+    },
+    "description": {
+     "title": "Description",
+     "type": "string"
+    },
+    "stake": {
+     "title": "Stake",
+     "type": "integer"
+    },
+    "control": {
+     "description": "成績が悪いことを確かめるための対照",
+     "title": "Control",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "id",
+    "group",
+    "label",
+    "description",
+    "stake",
+    "control"
+   ],
+   "title": "PickRule",
    "type": "object"
   },
   "Race": {
@@ -1009,6 +1132,18 @@
      ],
      "default": null,
      "description": "説明文を作るための根拠 (寄与)。予想前は null"
+    },
+    "entry": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/EntryInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "進入 (展示・予測)。予想前は null"
     }
    },
    "required": [
@@ -1375,9 +1510,17 @@
    "type": "string"
   },
   "pick_rule": {
-   "description": "picks の条件 (全レース共通)",
+   "description": "picks (steady) の条件 (全レース共通)",
    "title": "Pick Rule",
    "type": "string"
+  },
+  "pick_rules": {
+   "description": "picks のルールの一覧 (2026-11-12 から)",
+   "items": {
+    "$ref": "#/$defs/PickRule"
+   },
+   "title": "Pick Rules",
+   "type": "array"
   },
   "race": {
    "$ref": "#/$defs/Race"

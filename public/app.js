@@ -6,9 +6,18 @@
 
 const PICKS_NOTICE = `
   <strong>picks は実際に投票しているものではありません。</strong>
-  条件（オッズ10倍以下・期待値1.0超）に合う買い目を記録しているだけです。
-  過去の検証では回収率 89〜95%（確定オッズでの試算）で、100% を超えると言える条件は見つかっていません。
+  条件に合う買い目を1点100円として記録しているだけです（鑑賞用も検証用も同じ）。
+  過去の検証では、どの買い方も回収率 100% を超えると言える条件は見つかっていません（確定オッズでの試算でも 90〜94%）。
   買うと損をする可能性が高いことに注意してください。`;
+
+const GROUPS = [
+  { id: "fun", title: "鑑賞用の買い方", note: "確率と展開の性格で選ぶ、見て楽しむための買い方。成績の判定には使いません。" },
+  { id: "verify", title: "検証用の買い方", note: "期待値（確率 × オッズ）で選ぶ買い方。成績の判定に使います。" },
+];
+// 2026-11-11 までの picks は rule が条件の文字列。ルールの一覧 (pick_rules) が無いファイルも steady だけとして読む
+const LEGACY_RULES = { "odds<=10 & ev>1": "steady", "odds<=10 & ev>1.0": "steady" };
+const ruleId = (r) => LEGACY_RULES[r] || r;
+const STEADY_ONLY = [{ id: "steady", group: "verify", label: "堅実", description: "オッズ10倍以下・期待値1.0超", stake: 100, control: false }];
 
 const STATUS = {
   scheduled: "予想前", predicted: "予想済", closed: "締切・結果待ち", finished: "確定", cancelled: "中止・結果なし",
@@ -24,6 +33,7 @@ const fix = (x, d) => (isNum(x) ? x.toFixed(d) : "—");
 const odds = (x) => (isNum(x) ? x.toFixed(1) : "—");
 const ev = (x) => (isNum(x) ? x.toFixed(2) : "—");
 const yen = (x) => (isNum(x) ? `¥${Math.round(x).toLocaleString("ja-JP")}` : "—");
+const yenSigned = (x) => (isNum(x) ? `${x > 0 ? "+" : x < 0 ? "−" : ""}¥${Math.abs(Math.round(x)).toLocaleString("ja-JP")}` : "—");
 const int = (x) => (isNum(x) ? Math.round(x).toLocaleString("ja-JP") : "—");
 /** ISO 8601 (+09:00) → "HH:MM" (日本時間)。書き出し側が JST で持っているので、時差の計算はしない */
 const hhmm = (iso) => (iso ? String(iso).slice(11, 16) : "—");
@@ -209,7 +219,7 @@ async function pageRace() {
   }
   const r = d.race;
   document.title = `${r.venue_name} ${r.race_no}R ${fmtDate(date)} — ボートレース予想`;
-  main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), trifectaSection(r), picksSection(r, d.pick_rule),
+  main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), trifectaSection(r), picksSection(r, d.pick_rules),
     resultSection(r), commentarySection(r)].join("");
 }
 
@@ -313,7 +323,7 @@ function ownStats(course, s) {
 
 function trifectaSection(r) {
   if (!r.trifecta) return "";
-  const picks = new Set((r.picks || []).map((p) => p.combo));
+  const picks = new Set((r.picks || []).filter((p) => ruleId(p.rule) === "steady").map((p) => p.combo));
   const rows = r.trifecta.slice().sort((a, b) => a.rank - b.rank).slice(0, 10).map((t) => `
     <tr class="${t.hit ? "is-hit" : ""}">
       <td class="r num">${t.rank}</td>
@@ -325,27 +335,46 @@ function trifectaSection(r) {
     <div class="table-wrap"><table>
       <thead><tr><th class="r">順位</th><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th><th class="r">期待値</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div>
-    <div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。<span class="badge pick">買</span> は picks、◎ は的中、× は外れ。</div>`;
+    <div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。<span class="badge pick">買</span> は検証用の堅実の picks、◎ は的中、× は外れ。</div>`;
 }
 
-function picksSection(r, rule) {
-  const picks = r.picks || [];
-  let body;
-  if (!r.flags) body = `<div class="empty">予想の後に、締切前のオッズで判定します</div>`;
-  else if (!picks.length) body = `<p class="muted">この条件に合う買い目はありません。</p>`;
-  else {
-    body = `<div class="table-wrap"><table>
-      <thead><tr><th>組み合わせ</th><th class="r">オッズ</th><th class="r">期待値</th><th class="r">判定</th><th></th><th class="r">払戻</th></tr></thead>
-      <tbody>${picks.map((p) => `<tr class="${p.hit ? "is-hit" : ""}">
-        <td class="num">${esc(p.combo)}</td><td class="r num">${odds(p.odds)}</td><td class="r num">${ev(p.ev)}</td>
-        <td class="r num">${isNum(p.judged_at_min) ? `${p.judged_at_min}分前` : "—"}</td>
-        <td>${p.refunded ? '<span class="mark miss">返還</span>' : markShort(p.hit)}</td>
-        <td class="r num">${p.payout == null ? "—" : yen(p.payout)}</td></tr>`).join("")}</tbody></table></div>`;
-  }
-  return `<h2>picks（条件に合う買い目）</h2>
-    <div class="muted small">条件: <span class="num">${esc(rule || "")}</span>（1点100円として記録）。判定 = 判定に使ったオッズを取った時点（締切の何分前か）。</div>
-    ${body}
-    <div class="notice">${PICKS_NOTICE}</div>`;
+function picksSection(r, rules) {
+  rules = rules && rules.length ? rules : STEADY_ONLY;
+  const byRule = {};
+  for (const p of r.picks || []) (byRule[ruleId(p.rule)] = byRule[ruleId(p.rule)] || []).push(p);
+  const done = r.status === "finished";
+  const ruleBlock = (rule) => {
+    const ps = byRule[rule.id] || [];
+    const isVerify = rule.group === "verify";
+    let body;
+    if (!r.flags) body = `<p class="muted small">予想の後に判定します。</p>`;
+    else if (!ps.length) body = `<p class="muted small">${rule.id === "tenkai" ? "このレースは対象外（展開の1位が1逃げ・その他）。" : "この条件に合う買い目はありません。"}</p>`;
+    else {
+      const stake = ps.reduce((a, p) => a + p.stake, 0);
+      const pay = ps.reduce((a, p) => a + (p.payout || 0), 0);
+      const hits = ps.filter((p) => p.hit).length;
+      const sum = done && ps.every((p) => p.hit != null)
+        ? `<div class="pick-sum ${hits ? "is-hit" : ""}">${ps.length}点・${yen(stake)} → 払戻 <b>${yen(pay)}</b>（${yenSigned(pay - stake)}）</div>`
+        : `<div class="pick-sum">${ps.length}点・${yen(stake)}</div>`;
+      body = `${sum}<div class="table-wrap"><table>
+        <thead><tr><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th>${isVerify ? '<th class="r">期待値</th>' : ""}<th class="r">判定</th><th></th><th class="r">払戻</th></tr></thead>
+        <tbody>${ps.map((p) => `<tr class="${p.hit ? "is-hit" : ""}">
+          <td class="num">${esc(p.combo)}</td><td class="r num">${pct(p.prob, 2)}</td><td class="r num">${odds(p.odds)}</td>
+          ${isVerify ? `<td class="r num">${ev(p.ev)}</td>` : ""}
+          <td class="r num">${isNum(p.judged_at_min) ? `${p.judged_at_min}分前` : "予想時"}</td>
+          <td>${p.refunded ? '<span class="mark miss">返還</span>' : markShort(p.hit)}</td>
+          <td class="r num">${p.payout == null ? "—" : yen(p.payout)}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+    return `<div class="pick-rule"><h3>${esc(rule.label)}${rule.control ? ' <span class="badge">対照</span>' : ""}</h3>
+      <div class="muted small">${esc(rule.description)}</div>${body}</div>`;
+  };
+  const groups = GROUPS.map((g) => {
+    const rs = rules.filter((x) => x.group === g.id);
+    if (!rs.length) return "";
+    return `<h2>${g.title}</h2><div class="muted small">${g.note} 判定 = 判定に使ったオッズを取った時点（締切の何分前か）。</div>
+      ${rs.map(ruleBlock).join("")}`;
+  }).join("");
+  return `${groups}<div class="notice">${PICKS_NOTICE}</div>`;
 }
 
 function resultSection(r) {
@@ -385,7 +414,20 @@ async function pageStats() {
   const ids = index.stats_files || [];
   if (!ids.length) return showEmpty(main);
   const files = await Promise.all(ids.map((id) => getJSON(`data/stats/${id}.json`).catch(() => null)));
-  main.innerHTML = `<h1>成績</h1>` + files.map((f, i) => (f ? statsBlock(f, ids[i] === "summary") : "")).join("");
+  const FUN_IDS = new Set(["fun", "fun_monthly"]);
+  let html = `<h1>成績</h1>`, lastGroup = null;
+  files.forEach((f, i) => {
+    if (!f) return;
+    const g = FUN_IDS.has(ids[i]) ? "fun" : "verify";
+    if (g !== lastGroup) {
+      html += g === "fun"
+        ? `<h2>鑑賞用の買い方</h2><p class="muted small">回収率より「どんな当たり方をするか」を見るための記録です。</p>`
+        : `<h2>検証用の買い方・分析</h2><p class="muted small">期待値で選ぶ買い方の成績と、過去の検証です。成績の判定にはこちらを使います。</p>`;
+      lastGroup = g;
+    }
+    html += statsBlock(f, ids[i] === "summary", ids[i] === "fun");
+  });
+  main.innerHTML = html;
   // stats.html#terrain のように、URL の # で開くブロックを指定できる (共有用)
   const target = decodeURIComponent(location.hash.slice(1));
   if (target && document.getElementById(target)) {
@@ -394,7 +436,7 @@ async function pageStats() {
   }
 }
 
-function statsBlock(f, isSummary) {
+function statsBlock(f, isSummary, isFun = false) {
   const meta = `<div class="stats-meta">
       ${f.description ? `<p>${esc(f.description)}</p>` : ""}
       <p class="faint">期間: ${esc(f.period)}　出典: <span class="num">${esc(f.source)}</span></p>
@@ -404,12 +446,12 @@ function statsBlock(f, isSummary) {
       <li><b>確定オッズでの試算</b>（2025年・2026年1〜7月）: 締切後に決まるオッズで計算した過去の検証。実際にはこのオッズでは買えないので、有利に出ている。</li>
       <li><b>締切前オッズでの実績</b>（このサイトの picks）: 締切前に最後に取ったオッズで判定した、実際に買える時点の記録。上の2行とは別の数字。</li>
     </ul>` : "";
-  const table = isSummary ? summaryCards(f) : statsTable(f);
-  const charts = (f.charts || []).map((c) => lineChart(f, c)).join("");
+  const table = isSummary ? summaryCards(f) : isFun ? funCards(f) : statsTable(f);
+  const charts = (f.charts || []).map((c) => (c.unit === "yen" ? barChart(f, c) : lineChart(f, c))).join("");
   const findings = (f.findings || []).length ? `<h3>読み取れたこと</h3><ul class="findings">${f.findings.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
   const sup = (f.superseded || []).map((x) => `<div class="superseded"><b>訂正</b> ${esc(x)}</div>`).join("");
-  const notice = isSummary ? `<div class="notice"><strong>${esc(f.note || "")}</strong>${PICKS_NOTICE.replace(/<strong>.*?<\/strong>/s, "")}</div>` : "";
-  return `<details class="stats-block" id="${esc(f.id)}"${isSummary ? " open" : ""}>
+  const notice = isSummary || isFun ? `<div class="notice"><strong>${esc(f.note || "")}</strong>${PICKS_NOTICE.replace(/<strong>.*?<\/strong>/s, "")}</div>` : "";
+  return `<details class="stats-block" id="${esc(f.id)}"${isSummary || isFun || f.id === "fun_monthly" ? " open" : ""}>
     <summary>${esc(f.title)}</summary>
     ${meta}${kinds}${table}${notice}${charts}${findings}${sup}
   </details>`;
@@ -424,6 +466,8 @@ function cell(col, v) {
       return `<td class="r num ci">${sp(v.value)}% [${sp(v.lo)}, ${sp(v.hi)}]<span class="n">${int(v.n)}点・${int(v.hits)}的中</span></td>`;
     case "percent":
       return `<td class="r num">${sp(v)}%</td>`;
+    case "yen":
+      return `<td class="r num">${signed ? yenSigned(v) : yen(v)}</td>`;
     case "number":
       return `<td class="r num">${isNum(v) ? (Number.isInteger(v) ? int(v) : v.toLocaleString("ja-JP", { maximumFractionDigits: 3 })) : esc(v)}</td>`;
     default: {
@@ -461,6 +505,24 @@ function summaryCards(f) {
   }).join("");
 }
 
+/** 鑑賞用: 買い方ごとのカード (的中率・最高払戻・連続ハズレ・収支) */
+function funCards(f) {
+  return `<div class="fun-grid">${f.rows.map((r) => {
+    const none = !r.races;
+    return `<div class="fun-card">
+      <div class="sum-label">${esc(r.rule)}</div>
+      <div class="faint small">${esc(r.description || "")}</div>
+      ${none ? `<div class="big faint">記録中</div>` : `
+      <div class="fun-facts">
+        <div><span class="muted small">的中率</span><b class="num">${pct(r.race_hit_rate)}</b><span class="faint small num">${int(r.races)}レース</span></div>
+        <div><span class="muted small">最高払戻</span><b class="num">${r.max_payout == null ? "—" : yen(r.max_payout)}</b><span class="faint small">${esc(r.max_payout_race || "まだ当たりなし")}</span></div>
+        <div><span class="muted small">今の連続ハズレ</span><b class="num">${int(r.current_streak)}</b><span class="faint small num">最長 ${int(r.longest_streak)}</span></div>
+        <div><span class="muted small">収支</span><b class="num ${r.profit > 0 ? "pos" : r.profit < 0 ? "neg" : ""}">${yenSigned(r.profit)}</b><span class="faint small num">${r.roi ? `回収率 ${ciText(r.roi)}` : ""}</span></div>
+      </div>`}
+    </div>`;
+  }).join("")}</div>`;
+}
+
 function statsTable(f) {
   const head = f.columns.map((c) => `<th class="${c.type === "string" ? "" : "r"}">${esc(c.label)}</th>`).join("");
   const rows = f.rows.map((row) => `<tr>${f.columns.map((c) => cell(c, row[c.key])).join("")}</tr>`).join("");
@@ -494,6 +556,32 @@ function lineChart(f, c) {
   const legend = c.y.map((k, j) => `<span><i style="background:${colors[j % colors.length]}"></i>${esc(label(k))}</span>`).join("");
   return `<h3>${esc(c.title)}</h3>
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(c.title)}">${grid}${xl}${lines}</svg>
+    <div class="legend">${legend}</div>`;
+}
+
+/** 棒グラフ (円。0 を中心に上下)。y は系列の key (列の label を凡例に使う) */
+function barChart(f, c) {
+  const colors = ["#0969da", "#8250df", "#1a7f37", "#bc4c00", "#cf222e", "#6e7781"];
+  const label = (k) => (f.columns.find((x) => x.key === k) || {}).label || k;
+  const xs = f.rows.map((r) => String(r[c.x]));
+  const all = f.rows.flatMap((r) => c.y.map((k) => r[k])).filter(isNum);
+  if (!all.length) return "";
+  const W = 360, H = 220, L = 52, R = 10, T = 10, B = 24;
+  const hi = Math.max(0, ...all), lo = Math.min(0, ...all);
+  const span = hi - lo || 1;
+  const Y = (v) => T + ((hi - v) * (H - T - B)) / span;
+  const gw = (W - L - R) / xs.length, bw = Math.max(2, (gw * 0.8) / c.y.length);
+  const ticks = [lo, (lo + hi) / 2, hi].map((v) => `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v).toLocaleString("ja-JP")}</text>`).join("");
+  const bars = f.rows.map((r, i) => c.y.map((k, j) => {
+    const v = r[k];
+    if (!isNum(v)) return "";
+    const x = L + i * gw + gw * 0.1 + j * bw;
+    return `<rect x="${x}" y="${Math.min(Y(v), Y(0))}" width="${bw - 1}" height="${Math.max(1, Math.abs(Y(v) - Y(0)))}" fill="${colors[j % colors.length]}"><title>${esc(label(k))} ${esc(xs[i])}: ${yenSigned(v)}</title></rect>`;
+  }).join("")).join("");
+  const xl = xs.map((x, i) => `<text x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle">${esc(x)}</text>`).join("");
+  const legend = c.y.map((k, j) => `<span><i style="background:${colors[j % colors.length]}"></i>${esc(label(k))}</span>`).join("");
+  return `<h3>${esc(c.title)}</h3>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(c.title)}">${ticks}<line class="axis" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/>${bars}${xl}</svg>
     <div class="legend">${legend}</div>`;
 }
 

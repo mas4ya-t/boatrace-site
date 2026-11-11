@@ -25,6 +25,15 @@
     "title": {
      "title": "Title",
      "type": "string"
+    },
+    "unit": {
+     "default": "percent",
+     "enum": [
+      "percent",
+      "yen"
+     ],
+     "title": "Unit",
+     "type": "string"
     }
    },
    "required": [
@@ -52,7 +61,8 @@
       "string",
       "number",
       "percent",
-      "percent_ci"
+      "percent_ci",
+      "yen"
      ],
      "title": "Type",
      "type": "string"

@@ -263,3 +263,22 @@ th, td { padding: 6px 7px; }
 .partners { margin: 4px 0; }
 .partners th, .partners td { padding: 4px 6px; }
 .partner-head { font-size: .85rem; margin: 8px 0 0; }
+
+/* picks: ルールごとのまとまり (鑑賞用・検証用) */
+.pick-rule { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+.pick-rule h3 { margin: 0 0 2px; }
+.pick-sum { font-size: .9rem; margin: 6px 0 4px; }
+.pick-sum.is-hit { color: var(--hit); }
+
+/* 成績: 鑑賞用のカード */
+.fun-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin: 8px 0; }
+.fun-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.fun-card .sum-label { font-weight: 700; font-size: .95rem; }
+.fun-card .big { font-size: 1.2rem; font-weight: 700; margin-top: 4px; }
+.fun-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-top: 8px; }
+.fun-facts > div { display: flex; flex-direction: column; min-width: 0; }
+.fun-facts b { font-size: 1.15rem; }
+.fun-facts .faint { overflow-wrap: anywhere; }
+.pos { color: var(--hit); }
+.neg { color: #cf222e; }
+.chart line.axis { stroke: var(--muted); stroke-width: 1; }

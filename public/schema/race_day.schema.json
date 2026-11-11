@@ -221,6 +221,51 @@
    "title": "ListTrifecta",
    "type": "object"
   },
+  "PickRule": {
+   "additionalProperties": false,
+   "description": "picks のルール (predict/picks.py)。group: verify = 検証用 (期待値ベース、成績の判定に使う) / fun = 鑑賞用。",
+   "properties": {
+    "id": {
+     "title": "Id",
+     "type": "string"
+    },
+    "group": {
+     "enum": [
+      "verify",
+      "fun"
+     ],
+     "title": "Group",
+     "type": "string"
+    },
+    "label": {
+     "title": "Label",
+     "type": "string"
+    },
+    "description": {
+     "title": "Description",
+     "type": "string"
+    },
+    "stake": {
+     "title": "Stake",
+     "type": "integer"
+    },
+    "control": {
+     "description": "成績が悪いことを確かめるための対照",
+     "title": "Control",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "id",
+    "group",
+    "label",
+    "description",
+    "stake",
+    "control"
+   ],
+   "title": "PickRule",
+   "type": "object"
+  },
   "RaceListItem": {
    "additionalProperties": false,
    "properties": {
@@ -287,7 +332,16 @@
      "description": "3連単の1位。予想前は null"
     },
     "picks": {
-     "$ref": "#/$defs/ListPicks"
+     "$ref": "#/$defs/ListPicks",
+     "description": "検証用の steady (オッズ10倍以下・期待値1.0超) の picks"
+    },
+    "picks_by_rule": {
+     "additionalProperties": {
+      "$ref": "#/$defs/ListPicks"
+     },
+     "description": "ルール id ごとの picks (2026-11-12 から)",
+     "title": "Picks By Rule",
+     "type": "object"
     },
     "result": {
      "anyOf": [
@@ -338,9 +392,17 @@
    "type": "string"
   },
   "pick_rule": {
-   "description": "picks の条件 (全レース共通)",
+   "description": "picks (steady) の条件 (全レース共通)",
    "title": "Pick Rule",
    "type": "string"
+  },
+  "pick_rules": {
+   "description": "picks のルールの一覧 (2026-11-12 から)",
+   "items": {
+    "$ref": "#/$defs/PickRule"
+   },
+   "title": "Pick Rules",
+   "type": "array"
   },
   "races": {
    "items": {
