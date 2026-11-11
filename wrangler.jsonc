@@ -1,26 +1,30 @@
 // Cloudflare Workers の設定。画面は public/ を静的アセットとして、データ (/data/*.json) は Worker が D1 から返す。
 // 手順は README.md の「Cloudflare Workers での配信」。
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "boatrace-site",
-  "main": "worker/index.js",
-  "compatibility_date": "2025-09-01",
-  "workers_dev": true,
-  "assets": {
-    "directory": "./public",
-    "binding": "ASSETS",
-    // データと書き込み API は必ず Worker を通す (public/data/ は .assetsignore でアップロードしない)
-    "run_worker_first": ["/data/*", "/api/*"]
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "boatrace-site",
-      // wrangler d1 create boatrace-site で出た database_id に置き換える
-      "database_id": "REPLACE_WITH_DATABASE_ID",
-      "migrations_dir": "worker/migrations"
-    }
-  ],
-  "observability": { "enabled": true }
-  // API_SECRET は wrangler secret put API_SECRET で設定する (このファイルには書かない)
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "boatrace-site",
+	"main": "worker/index.js",
+	"compatibility_date": "2025-09-01",
+	"workers_dev": true,
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		// データと書き込み API は必ず Worker を通す (public/data/ は .assetsignore でアップロードしない)
+		"run_worker_first": [
+			"/data/*",
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "boatrace-site",
+			"database_id": "8dd2f1bf-e644-48dc-a9db-f1eb1256480d",
+			"migrations_dir": "worker/migrations"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+	// API_SECRET は wrangler secret put API_SECRET で設定する (このファイルには書かない)
 }
