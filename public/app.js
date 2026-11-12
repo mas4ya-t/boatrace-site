@@ -562,16 +562,25 @@ function picksSection(r, rules) {
   const ruleBlock = (rule) => {
     const ps = byRule[rule.id] || [];
     const isVerify = rule.group === "verify";
-    let body;
-    if (!r.flags) body = `<p class="muted small">予想の後に判定します。</p>`;
-    else if (!ps.length) body = `<p class="muted small">${rule.id === "tenkai" ? "このレースは対象外（展開の1位が1逃げ・その他）。" : "この条件に合う買い目はありません。"}</p>`;
-    else {
+    let body, head;
+    if (!r.flags) {
+      body = `<p class="muted small">予想の後に判定します。</p>`;
+      head = `<span class="muted">予想前</span>`;
+    } else if (!ps.length) {
+      const none = rule.id === "tenkai" ? "対象外" : "なし";
+      body = `<p class="muted small">${rule.id === "tenkai" ? "このレースは対象外（展開の1位が1逃げ・その他）。" : "この条件に合う買い目はありません。"}</p>`;
+      head = `<span class="muted">${none}</span>`;
+    } else {
       const stake = ps.reduce((a, p) => a + p.stake, 0);
       const pay = ps.reduce((a, p) => a + (p.payout || 0), 0);
       const hits = ps.filter((p) => p.hit).length;
-      const sum = done && ps.every((p) => p.hit != null)
+      const settled = done && ps.every((p) => p.hit != null);
+      const minPay = ps.every((p) => isNum(p.odds)) ? Math.min(...ps.map((p) => p.odds * p.stake)) : null;
+      head = `<span class="num">${ps.length}点・${yen(stake)}</span>`
+        + (settled ? (hits ? ` <span class="mark hit">◎ ${yen(pay)}</span>` : ' <span class="mark miss">×</span>') : "");
+      const sum = settled
         ? `<div class="pick-sum ${hits ? "is-hit" : ""}">${ps.length}点・${yen(stake)} → 払戻 <b>${yen(pay)}</b>（${yenSigned(pay - stake)}）</div>`
-        : `<div class="pick-sum">${ps.length}点・${yen(stake)}${ps.every((p) => isNum(p.odds)) ? `<span class="muted">（当たれば ${yen(Math.min(...ps.map((p) => p.odds * p.stake)))} 以上・締切前オッズ）</span>` : ""}</div>`;
+        : `<div class="pick-sum">${ps.length}点・${yen(stake)}${minPay != null ? `<span class="muted">（当たれば ${yen(minPay)} 以上・締切前オッズ）</span>` : ""}</div>`;
       body = `${sum}<div class="table-wrap"><table>
         <thead><tr><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th>${isVerify ? '<th class="r">期待値</th>' : ""}<th class="r">金額</th><th class="r">判定</th><th></th><th class="r">払戻</th></tr></thead>
         <tbody>${ps.map((p) => `<tr class="${p.hit ? "is-hit" : ""}">
@@ -582,8 +591,10 @@ function picksSection(r, rules) {
           <td>${p.refunded ? '<span class="mark miss">返還</span>' : markShort(p.hit)}</td>
           <td class="r num">${p.payout == null ? "—" : yen(p.payout)}</td></tr>`).join("")}</tbody></table></div>`;
     }
-    return `<div class="pick-rule"><h3>${esc(rule.label)}${rule.control ? ' <span class="badge">対照</span>' : ""}</h3>
-      <div class="muted small">${esc(rule.description)}</div>${body}</div>`;
+    // 買い方ごとに折りたたむ (押すまで閉じておく)。閉じていても点数・金額・結果は見出しで分かる
+    return `<details class="pick-rule"><summary><span class="pr-name">${esc(rule.label)}${rule.control ? ' <span class="badge">対照</span>' : ""}</span>
+        <span class="pr-head">${head}</span></summary>
+      <div class="muted small">${esc(rule.description)}</div>${body}</details>`;
   };
   const groups = GROUPS.map((g) => {
     const rs = rules.filter((x) => x.group === g.id);

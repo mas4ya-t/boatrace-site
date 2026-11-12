@@ -402,3 +402,15 @@ details.own-all > summary::-webkit-details-marker { display: none; }
 details.own-all > summary::after { content: " ▾"; }
 details.own-all[open] > summary::after { content: " ▴"; }
 details.own-all[open] > summary { margin-bottom: 4px; }
+
+/* レース詳細: 買い方ごとの折りたたみ (押すまで閉じておく) */
+details.pick-rule { padding: 0 12px; }
+details.pick-rule > summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; flex-wrap: wrap;
+}
+details.pick-rule > summary::-webkit-details-marker { display: none; }
+details.pick-rule > summary::before { content: "▸"; color: var(--muted); }
+details.pick-rule[open] > summary::before { content: "▾"; }
+details.pick-rule .pr-name { font-weight: 700; }
+details.pick-rule .pr-head { margin-left: auto; font-size: .88rem; white-space: nowrap; }
+details.pick-rule[open] { padding-bottom: 8px; }
