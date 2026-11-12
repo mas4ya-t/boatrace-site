@@ -571,12 +571,13 @@ function picksSection(r, rules) {
       const hits = ps.filter((p) => p.hit).length;
       const sum = done && ps.every((p) => p.hit != null)
         ? `<div class="pick-sum ${hits ? "is-hit" : ""}">${ps.length}点・${yen(stake)} → 払戻 <b>${yen(pay)}</b>（${yenSigned(pay - stake)}）</div>`
-        : `<div class="pick-sum">${ps.length}点・${yen(stake)}</div>`;
+        : `<div class="pick-sum">${ps.length}点・${yen(stake)}${ps.every((p) => isNum(p.odds)) ? `<span class="muted">（当たれば ${yen(Math.min(...ps.map((p) => p.odds * p.stake)))} 以上・締切前オッズ）</span>` : ""}</div>`;
       body = `${sum}<div class="table-wrap"><table>
-        <thead><tr><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th>${isVerify ? '<th class="r">期待値</th>' : ""}<th class="r">判定</th><th></th><th class="r">払戻</th></tr></thead>
+        <thead><tr><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th>${isVerify ? '<th class="r">期待値</th>' : ""}<th class="r">金額</th><th class="r">判定</th><th></th><th class="r">払戻</th></tr></thead>
         <tbody>${ps.map((p) => `<tr class="${p.hit ? "is-hit" : ""}">
           <td class="num">${esc(p.combo)}</td><td class="r num">${pct(p.prob, 2)}</td><td class="r num">${odds(p.odds)}</td>
           ${isVerify ? `<td class="r num">${ev(p.ev)}</td>` : ""}
+          <td class="r num">${yen(p.stake)}</td>
           <td class="r num">${isNum(p.judged_at_min) ? `${p.judged_at_min}分前` : "予想時"}</td>
           <td>${p.refunded ? '<span class="mark miss">返還</span>' : markShort(p.hit)}</td>
           <td class="r num">${p.payout == null ? "—" : yen(p.payout)}</td></tr>`).join("")}</tbody></table></div>`;
