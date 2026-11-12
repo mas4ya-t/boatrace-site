@@ -2,7 +2,7 @@
 
 ボートレース予想の公開用リポジトリ。
 
-- `public/` — 画面（index.html = ホーム / races.html / race.html / stats.html / app.js / app.css）、`schema/`
+- `public/` — 画面（index.html = ホーム / races.html / race.html / stats.html / app.js / app.css）、`schema/`、`baselines.json`（数字に添える「基準との差」の基準）
 - `worker/` — Cloudflare Workers の Worker（データの読み書き API）と D1 のテーブル定義
 - `wrangler.jsonc` — Worker の設定
 
@@ -17,7 +17,8 @@ https://boatrace-site.mas4ya.workers.dev
 | 画面 | `public/` を Workers Assets で公開（`data/` は `.assetsignore` で除く）。画面を変えたら `npx wrangler deploy` |
 | データ | 本体が HTTP POST で Worker に送り、D1 に入る（予想・オッズ・結果のたびに、すぐ反映）。Worker が `/data/...json` として返す |
 
-画面のコードは `/data/...json` を読む（静的ファイルだったころと同じパス・同じ形）。
+画面のコードは `/data/...json` を読む（静的ファイルだったころと同じパス・同じ形）。画面を直したら、HTML の `?v=` の版番号を上げてから deploy する
+（ブラウザに古い版が残らないように）。データの中身と画面の説明は、本体の `docs/web.md`。
 `public/data/` は本体の手元の書き出し先で、git では管理しない（2026-11-12 まで GitHub Pages で公開していたときの履歴にだけ残っている）。
 GitHub Pages は 2026-11-12 に止めた（`.github/workflows/pages.yml` を削除）。
 
@@ -66,4 +67,4 @@ KV は無料だと書き込みが1日1,000回までで足りないので、D1 �
 5. 今のデータを全部送る（本体で）: `uv run python -m boatrace_ai.web upload`
 6. `https://boatrace-site.<サブドメイン>.workers.dev/` を開いて確かめる
 
-切り替えたら本体の `.env` を `SITE_PUSH=0` にする（git での push をやめる）。
+切り替えたら本体の `.env` を `SITE_PUSH=0` にする（git での push をやめる）。2026-11-12 に切り替え済み。
