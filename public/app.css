@@ -414,3 +414,20 @@ details.pick-rule[open] > summary::before { content: "▾"; }
 details.pick-rule .pr-name { font-weight: 700; }
 details.pick-rule .pr-head { margin-left: auto; font-size: .88rem; white-space: nowrap; }
 details.pick-rule[open] { padding-bottom: 8px; }
+
+/* ─── 6艇の中で一番良い (緑)・一番悪い (赤) のセル ─── */
+td.cbest, .legend-chip.cbest { background: #dafbe1; color: #1a7f37; font-weight: 700; box-shadow: inset 0 0 0 2px #1a7f37; }
+td.cworst, .legend-chip.cworst { background: #ffebe9; color: #cf222e; font-weight: 700; box-shadow: inset 0 0 0 2px #cf222e; }
+td.cbest.low, td.cworst.low { opacity: 1; }
+.legend-chip { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: .78rem; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) td.cbest, :root:not([data-theme="light"]) .legend-chip.cbest { background: #12261e; color: #3fb950; box-shadow: inset 0 0 0 2px #3fb950; }
+  :root:not([data-theme="light"]) td.cworst, :root:not([data-theme="light"]) .legend-chip.cworst { background: #2d1214; color: #f85149; box-shadow: inset 0 0 0 2px #f85149; }
+}
+/* 展開別に勝ったときの相手: 率が高いほど濃い緑 */
+.partners td.heat { background: rgba(26, 127, 55, calc(var(--a) * 0.55)); }
+.partners td.heat.top { font-weight: 700; box-shadow: inset 0 0 0 2px #1a7f37; }
+.partner-head { margin-top: 10px; }
+/* ホーム: グリッドとボタンの間、picks の的中 */
+.vgrid-btn { margin-top: 12px; }
+.pick-won { flex-wrap: wrap; gap: 4px 10px; }
