@@ -124,6 +124,22 @@
      "default": null,
      "description": "払戻の合計 (円)。finished まで null",
      "title": "Payout"
+    },
+    "combos": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "買った組み合わせ (艇番、詳細の picks の順)",
+     "title": "Combos"
     }
    },
    "required": [
@@ -223,7 +239,7 @@
   },
   "PickRule": {
    "additionalProperties": false,
-   "description": "picks のルール (predict/picks.py)。group: verify = 検証用 (期待値ベース、成績の判定に使う) / fun = 鑑賞用。",
+   "description": "picks のルール (predict/picks.py)。2026-11-15 から group は fun だけ (検証用は廃止)。stake は1レースの金額の上限 (穴は1点の金額)。",
    "properties": {
     "id": {
      "title": "Id",
@@ -392,7 +408,7 @@
    "type": "string"
   },
   "pick_rule": {
-   "description": "picks (steady) の条件 (全レース共通)",
+   "description": "一覧の picks に使うルールの id (pick_rules)",
    "title": "Pick Rule",
    "type": "string"
   },

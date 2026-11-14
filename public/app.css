@@ -112,6 +112,8 @@ body[data-page="index"] main { padding-bottom: 96px; }   /* 下に固定した�
 .st-finished { color: var(--st-finished); }
 .st-cancelled { color: var(--st-cancelled); }
 .badge.pick { color: #fff; background: #bf3989; border-color: #bf3989; }
+.badge.pick.blue { color: #fff; background: #1f6feb; border-color: #1f6feb; }   /* 本線の買い目 */
+.badge.pick.gold { color: #3d2a00; background: linear-gradient(135deg, #f7d774, #d4a017); border-color: #c99a12; }   /* 特選の買い目 */
 .badge.plain { color: var(--muted); }
 
 /* 的中マーク: true = 的中、false = 外れ、null = 結果待ち (区別する) */
@@ -196,7 +198,7 @@ tr.is-hit td { background: var(--hit-bg); }
 .weather { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: .9rem; color: var(--muted); }
 .wind-arrow { display: inline-block; width: 1.2em; text-align: center; font-weight: 700; color: var(--fg); }
 .prob-list { display: grid; gap: 6px; }
-.prob-row { display: grid; grid-template-columns: 8.5em minmax(0, 1fr) 3.6em 3.4em; gap: 8px; align-items: center; font-size: .92rem; }
+.prob-row { display: grid; grid-template-columns: 8.5em minmax(0, 1fr) 3.6em; gap: 8px; align-items: center; font-size: .92rem; }
 .prob-row .pct { text-align: right; }
 
 .entry-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
@@ -285,12 +287,13 @@ th, td { padding: 6px 7px; }
 
 /* ─── トップ (2026-11-12): サマリ・会場と表示の切り替え・軽い1行・会場ごとのまとまり ─── */
 .day-sum { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .88rem; margin: 0 0 8px; }
+.day-sum .ds-line { flex-basis: 100%; }   /* 特選・picks・本線は1行ずつ */
 .ctrl { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
 .ctrl select {
   width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px;
   background: var(--bg); color: var(--fg); font: inherit; font-size: .95rem;
 }
-.segs { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segs { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg {
   display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 2px;
   color: var(--fg); font-size: .88rem; white-space: nowrap; border-left: 1px solid var(--line);
@@ -298,6 +301,11 @@ th, td { padding: 6px 7px; }
 .seg:first-child { border-left: 0; }
 .seg:hover { text-decoration: none; background: var(--card); }
 .seg.on { background: var(--fg); color: var(--bg); font-weight: 700; }
+/* 買い目・的中のときの買い方の選択: 8つまで、狭い画面では2段に */
+.rule-segs { grid-template-columns: repeat(4, 1fr); margin: -2px 0 8px; }
+.rule-segs .seg { min-height: 34px; font-size: .82rem; border-top: 1px solid var(--line); }
+.rule-segs .seg:nth-child(-n+4) { border-top: 0; }
+.rule-segs .seg:nth-child(4n+1) { border-left: 0; }
 .small-notice { font-size: .85rem; padding: 6px 10px; }
 .small-notice strong { margin: 0; }
 .small-notice details summary { cursor: pointer; color: var(--accent); margin-top: 2px; }
@@ -325,7 +333,7 @@ th, td { padding: 6px 7px; }
 .venue-group[open] > summary::before { content: "▾"; }
 .venue-group .vname { font-weight: 700; }
 .venue-group .vmeta b { color: var(--fg); }
-.venue-group > summary .badge { margin-left: auto; }
+.venue-group > summary .vbadges { margin-left: auto; display: flex; gap: 4px; }
 .venue-group[open] { padding-bottom: 6px; }
 
 /* ─── レース詳細: 出走表 (表) ─── */
@@ -414,6 +422,10 @@ details.pick-rule[open] > summary::before { content: "▾"; }
 details.pick-rule .pr-name { font-weight: 700; }
 details.pick-rule .pr-head { margin-left: auto; font-size: .88rem; white-space: nowrap; }
 details.pick-rule[open] { padding-bottom: 8px; }
+/* 対抗: 1つの折りたたみの中に「確率順」「筋」 */
+.pick-sub { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 6px; }
+.pick-sub h3 { font-size: .95rem; margin: 0 0 2px; }
+details.pick-rule .pr-head { white-space: normal; text-align: right; }
 
 /* ─── 6艇の中で一番良い (緑)・一番悪い (赤) のセル ─── */
 td.cbest, .legend-chip.cbest { background: #b4f0c2; color: #116329; font-weight: 700; }
@@ -441,3 +453,6 @@ td.cbest.low, td.cworst.low { opacity: 1; }
 /* 回数が少ない展開は数字だけ薄く (見出しのコースのマークははっきり) */
 .table-wrap.partners.low { opacity: 1; }
 .table-wrap.partners.low tbody { opacity: .55; }
+/* 買い目の表示: 組み合わせを平文で並べる。当たった組み合わせは太字で緑 */
+.race-row .l3.combos { flex-wrap: wrap; gap: 2px 10px; color: var(--muted); font-size: .84rem; }
+.race-row .l3.combos .combo-hit { color: #1a7f37; }

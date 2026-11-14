@@ -851,13 +851,26 @@
      "title": "Prob"
     },
     "rule": {
-     "description": "ルールの id (pick_rules)。2026-11-11 までの記録は条件の文字列 (odds<=10 & ev>1 = steady)",
+     "description": "ルールの id (pick_rules)",
      "title": "Rule",
      "type": "string"
     },
     "stake": {
      "title": "Stake",
      "type": "integer"
+    },
+    "proportional": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "金額の上限以内でトリガミを避ける配分が無く、確率に比例して配分した (当たってもトリガミになりうる) とき true",
+     "title": "Proportional"
     },
     "judged_at_min": {
      "anyOf": [
@@ -921,7 +934,7 @@
   },
   "PickRule": {
    "additionalProperties": false,
-   "description": "picks のルール (predict/picks.py)。group: verify = 検証用 (期待値ベース、成績の判定に使う) / fun = 鑑賞用。",
+   "description": "picks のルール (predict/picks.py)。2026-11-15 から group は fun だけ (検証用は廃止)。stake は1レースの金額の上限 (穴は1点の金額)。",
    "properties": {
     "id": {
      "title": "Id",
@@ -1510,7 +1523,7 @@
    "type": "string"
   },
   "pick_rule": {
-   "description": "picks (steady) の条件 (全レース共通)",
+   "description": "一覧の picks に使うルールの id (pick_rules)",
    "title": "Pick Rule",
    "type": "string"
   },
