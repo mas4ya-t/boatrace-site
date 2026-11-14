@@ -385,8 +385,13 @@ function rankClasses(vals, higher, keys = vals) {
   const mx = Math.max(...ok), mn = Math.min(...ok);
   if (mx === mn) return vals.map(() => "");
   const good = higher ? mx : mn, bad = higher ? mn : mx;
+  // 2番目に良い値 (3艇以上を比べるときだけ。一番悪い値と同じなら塗らない)
+  const distinct = [...new Set(ok)].sort((a, b) => (higher ? b - a : a - b));
+  const second = ok.length >= 3 && distinct.length >= 3 ? distinct[1] : null;
   // 大きいほど良い数字で値が 0 (一度も無い) の艇は、コースの平均との差で比べても緑にしない
-  return keys.map((k, i) => (!isNum(k) ? "" : k === good && !(higher && vals[i] === 0) ? " cbest" : k === bad ? " cworst" : ""));
+  const zero = (i) => higher && vals[i] === 0;
+  return keys.map((k, i) => (!isNum(k) ? "" : k === good && !zero(i) ? " cbest" : k === second && !zero(i) ? " cgood"
+    : k === bad ? " cworst" : ""));
 }
 
 /** 列ごとの値の並び → 色のクラスの並び。spec = [[値の並び, 大きいほど良いか, 比べる値の並び (省略時は値)], ...] */
@@ -394,7 +399,7 @@ const rankCols = (spec) => spec.map(([vals, higher, keys]) => rankClasses(vals, 
 
 let BASE = null;   // baselines.json (レース詳細で読む。コースの平均との差で比べるのに使う)
 const SHOW_OWN_STATS = true;    // 独自集計 (コースと節の成績・決まり手・展開別の相手) を出すか。出すときも、押すまで閉じておく
-const RANK_NOTE = `<span class="cbest legend-chip">緑</span> = 6艇の中で一番良い、<span class="cworst legend-chip">赤</span> = 一番悪い`;
+const RANK_NOTE = `<span class="cbest legend-chip">緑</span> = 6艇の中で一番良い、<span class="cgood legend-chip">薄い緑</span> = 2番目、<span class="cworst legend-chip">赤</span> = 一番悪い`;
 
 function entriesSection(r) {
   const es = r.entries || [];
@@ -415,14 +420,14 @@ function entriesSection(r) {
   const rows = es.map((e, i) => {
     const o = e.official || {}, ex = e.exhibition || {};
     const c = courseOf(e.course);
-    return `<tr class="${e.hit_win ? "is-hit" : ""}">
+    return `<tr>
       <th class="sticky"><div class="who">${boat(e.course)}<span class="pname">${esc(e.player_name)}</span></div>
         <div class="faint small">${esc(e.class || "")}${isNum(e.age) ? ` ${e.age}歳` : ""}${isNum(e.weight) ? ` ${e.weight.toFixed(1)}kg` : ""}</div></th>
       ${finished ? `<td class="r num"><b>${arrivalText(e)}</b></td>` : ""}
       <td class="r num${cWin[i]}">${pct(e.p_win)}</td>
       <td class="r num${cTop3[i]}">${pct(e.p_top3)}</td>
       <td class="r num">${c ? `${c}${c !== e.course ? '<span class="moved" title="艇番と違うコース">*</span>' : ""}` : "—"}</td>
-      <td class="r num${cExh[i]}">${isNum(ex.time) ? `${ex.time.toFixed(2)}${isNum(ex.rank) ? `<span class="faint">(${ex.rank})</span>` : ""}` : "—"}</td>
+      <td class="r num${cExh[i]}">${isNum(ex.time) ? ex.time.toFixed(2) : "—"}</td>
       <td class="r num${cNat[i]}">${fix(o.national_win_rate, 2)}</td>
       <td class="r num${cLoc[i]}">${fix(o.local_win_rate, 2)}</td>
       <td class="r num${cMot[i]}">${pctOfficial(o.motor_2rate)}</td>
@@ -432,7 +437,7 @@ function entriesSection(r) {
       （コース1〜6の艇番。<span class="moved">*</span> は艇番と違うコースに入ると予測）</div>` : "";
   const table = `<div class="table-wrap entry-table"><table>
       <thead><tr><th class="sticky">艇・選手</th>${finished ? '<th class="r">着</th>' : ""}<th class="r">1着</th><th class="r">3着内</th>
-        <th class="r">予測<br>コース</th><th class="r">展示<br>(順位)</th><th class="r">全国<br>勝率</th><th class="r">当地<br>勝率</th>
+        <th class="r">予測<br>コース</th><th class="r">展示<br>タイム</th><th class="r">全国<br>勝率</th><th class="r">当地<br>勝率</th>
         <th class="r">モーター<br>2連%</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
     <div class="faint small">${RANK_NOTE}（列ごと。展示タイムは小さいほど良い）。1着・3着内はモデルの確率。横にスクロールできます。</div>`;

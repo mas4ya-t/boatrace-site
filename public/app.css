@@ -416,17 +416,19 @@ details.pick-rule .pr-head { margin-left: auto; font-size: .88rem; white-space: 
 details.pick-rule[open] { padding-bottom: 8px; }
 
 /* ─── 6艇の中で一番良い (緑)・一番悪い (赤) のセル ─── */
-td.cbest, .legend-chip.cbest { background: #dafbe1; color: #1a7f37; font-weight: 700; box-shadow: inset 0 0 0 2px #1a7f37; }
-td.cworst, .legend-chip.cworst { background: #ffebe9; color: #cf222e; font-weight: 700; box-shadow: inset 0 0 0 2px #cf222e; }
+td.cbest, .legend-chip.cbest { background: #b4f0c2; color: #116329; font-weight: 700; }
+td.cgood, .legend-chip.cgood { background: #e6f9ea; }
+td.cworst, .legend-chip.cworst { background: #ffd8d3; color: #a40e26; font-weight: 700; }
 td.cbest.low, td.cworst.low { opacity: 1; }
 .legend-chip { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: .78rem; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) td.cbest, :root:not([data-theme="light"]) .legend-chip.cbest { background: #12261e; color: #3fb950; box-shadow: inset 0 0 0 2px #3fb950; }
-  :root:not([data-theme="light"]) td.cworst, :root:not([data-theme="light"]) .legend-chip.cworst { background: #2d1214; color: #f85149; box-shadow: inset 0 0 0 2px #f85149; }
+  :root:not([data-theme="light"]) td.cbest, :root:not([data-theme="light"]) .legend-chip.cbest { background: #1c4428; color: #56d364; }
+  :root:not([data-theme="light"]) td.cgood, :root:not([data-theme="light"]) .legend-chip.cgood { background: #13261a; }
+  :root:not([data-theme="light"]) td.cworst, :root:not([data-theme="light"]) .legend-chip.cworst { background: #4a1a1d; color: #ff7b72; }
 }
 /* 展開別に勝ったときの相手: 率が高いほど濃い緑 */
 .partners td.heat { background: rgba(26, 127, 55, calc(var(--a) * 0.55)); }
-.partners td.heat.top { font-weight: 700; box-shadow: inset 0 0 0 2px #1a7f37; }
+.partners td.heat.top { font-weight: 700; }
 .partner-head { margin-top: 10px; }
 /* ホーム: グリッドとボタンの間、picks の的中 */
 .vgrid-btn { margin-top: 12px; }
