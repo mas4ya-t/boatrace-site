@@ -108,18 +108,17 @@ async function pageHome() {
   const open = isToday ? races.filter(isOpen) : [];
 
   const soon = open.slice(0, 3);
-  // 当たった買い方と払戻 (一覧の picks_by_rule)。picks = 検証用、いろいろな的中 = 予想の3連単1位 + 鑑賞用
+  // 当たった買い方と払戻 (一覧の picks_by_rule)。picks = 堅実 (一覧の「買」)、いろいろな的中 = 予想の3連単1位 + 堅実以外の買い方
   const rules = day?.pick_rules || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
-  const groupOf = Object.fromEntries(rules.map((x) => [x.id, x.group]));
-  const hitsOf = (r, group) => Object.entries(r.picks_by_rule || {}).filter(([id, v]) => v.hits && (groupOf[id] || "verify") === group)
+  const hitsOf = (r, keep) => Object.entries(r.picks_by_rule || {}).filter(([id, v]) => v.hits && keep(id))
     .map(([id, v]) => ({ name: label[id] || id, payout: v.payout || 0 }));
   const collect = (fn) => races.map((r) => ({ r, won: fn(r) })).filter((x) => x.won.length)
     .map((x) => ({ ...x, payout: x.won.reduce((a, w) => a + w.payout, 0) })).sort((a, b) => b.payout - a.payout);
-  const pickHits = collect((r) => hitsOf(r, "verify"));
+  const pickHits = collect((r) => hitsOf(r, (id) => id === "steady"));
   const allHits = collect((r) => [
     ...(r.top_trifecta?.hit && r.result ? [{ name: `予想1位 ${r.top_trifecta.combo}`, payout: r.result.payout || 0 }] : []),
-    ...hitsOf(r, "fun")]);
+    ...hitsOf(r, (id) => id !== "steady")]);
   const wonRows = (list) => list.slice(0, 5).map(({ r, won }) => raceRow(r, false,
     `<div class="l3 pick-won">${won.map((w) => `<span class="mark hit">◎ ${esc(w.name)} ${yen(w.payout)}</span>`).join("")}</div>`)).join("");
 
@@ -146,10 +145,10 @@ async function pageHome() {
     ${races.length ? section("会場", isToday ? "残りレース数・次の締切" : "", venueGrid(races, date, isToday, isOpen)) : ""}
     ${soon.length ? section("もうすぐ締切", "", soon.map((r) => raceRow(r)).join(""),
       `<a class="more" href="races.html?date=${date}&view=next">締切前のレースをすべて見る</a>`) : ""}
-    ${section(isToday ? "今日の picks の的中" : "この日の picks の的中", pickHits.length ? `検証用の買い方・${pickHits.length}レース・払戻の多い順` : "検証用の買い方",
+    ${section(isToday ? "今日の picks の的中" : "この日の picks の的中", pickHits.length ? `堅実（オッズ10倍以下・期待値1.0超）・${pickHits.length}レース` : "堅実（オッズ10倍以下・期待値1.0超）",
       pickHits.length ? wonRows(pickHits) : '<div class="empty">まだありません</div>',
       pickHits.length > 5 ? `<a class="more" href="races.html?date=${date}&view=picks">picks のあったレースをすべて見る</a>` : "")}
-    ${section(isToday ? "今日の的中" : "この日の的中", allHits.length ? `予想1位・鑑賞用の買い方・${allHits.length}レース・払戻の多い順` : "予想1位・鑑賞用の買い方",
+    ${section(isToday ? "今日の的中" : "この日の的中", allHits.length ? `予想1位・ほかの買い方・${allHits.length}レース・払戻の多い順` : "予想1位・ほかの買い方",
       allHits.length ? wonRows(allHits) : '<div class="empty">まだありません</div>',
       allHits.length > 5 ? `<a class="more" href="races.html?date=${date}&view=results">結果の出たレースをすべて見る</a>` : "")}
     ${section("鑑賞用の買い方", fun?.period ? esc(fun.period) : "", funCardsMini, '<a class="more" href="stats.html">成績を見る</a>')}`;
