@@ -557,14 +557,14 @@ function partnersHtml(s) {
     const top2 = Math.max(...p.second.map((x) => x.rate || 0)), top3 = Math.max(...p.third.map((x) => x.rate || 0));
     return `<div class="partner-head"><b>${esc(p.development)}</b>で勝ったとき <span class="faint num">（${int(p.wins)}回${low ? "・少ないので参考" : ""}）</span></div>
       <div class="table-wrap partners${low ? " low" : ""}"><table>
-        <thead><tr><th></th>${p.second.map((x) => `<th class="r">${x.course}コース</th>`).join("")}</tr></thead>
+        <thead><tr><th></th>${p.second.map((x) => `<th class="r" title="${x.course}コース">${boat(x.course)}</th>`).join("")}</tr></thead>
         <tbody>
           <tr><td class="muted">2着</td>${p.second.map((x) => heat(x.rate, top2)).join("")}</tr>
           <tr><td class="muted">3着</td>${p.third.map((x) => heat(x.rate, top3)).join("")}</tr>
         </tbody></table></div>`;
   };
   return `${won.map(partnerTable).join("")}
-    <div class="faint small">勝ったことのある展開だけ。この選手がその展開で勝ったレースのうち、2着・3着がそのコースだった割合（濃い緑ほど多い。太字が一番多いコース）。${LOW_WINS}回未満は薄く表示（偶然の影響が大きい）。</div>`;
+    <div class="faint small">勝ったことのある展開だけ。見出しの色付きの数字はコース（艇番ではない）。この選手がその展開で勝ったレースのうち、2着・3着がそのコースだった割合（濃い緑ほど多い。太字が一番多いコース）。${LOW_WINS}回未満は薄く表示（偶然の影響が大きい）。</div>`;
 }
 
 function trifectaSection(r) {

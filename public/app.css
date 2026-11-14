@@ -433,3 +433,11 @@ td.cbest.low, td.cworst.low { opacity: 1; }
 /* ホーム: グリッドとボタンの間、picks の的中 */
 .vgrid-btn { margin-top: 12px; }
 .pick-won { flex-wrap: wrap; gap: 4px 10px; }
+
+/* レース詳細の表 (出走表・独自集計・展開別の相手) は中央ぞろえ。艇・選手の列だけ左ぞろえ */
+.entry-table th:not(.sticky), .entry-table td, .partners th, .partners td,
+.entry-table th.r, .entry-table td.r, .partners th.r, .partners td.r { text-align: center; }
+.partners th .boat { margin: 0 auto; }
+/* 回数が少ない展開は数字だけ薄く (見出しのコースのマークははっきり) */
+.table-wrap.partners.low { opacity: 1; }
+.table-wrap.partners.low tbody { opacity: .55; }
