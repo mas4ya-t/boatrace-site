@@ -221,13 +221,14 @@ async function pageRaces() {
   const rules = day.pick_rules || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
   let rule = q.get("rule") || "";
-  if (rule && !label[rule]) rule = "";
-  if (view === "buy" && !rule) rule = "honsen";
+  if (rule && !label[rule] && !(view === "buy" && rule === "all")) rule = "";
+  if (view === "buy" && !rule) rule = "honsen";                 // 買い目の「すべて」は rule=all (空は本線)
+  const ALL = view === "buy" && rule === "all";
   const pbr = (r, id) => r.picks_by_rule?.[id] || {};
   const pick = {
     next: (r) => isOpen(r),
     all: () => true,
-    buy: (r) => (pbr(r, rule).count || 0) > 0,
+    buy: (r) => (ALL ? Object.values(r.picks_by_rule || {}).some((v) => v.count) : (pbr(r, rule).count || 0) > 0),
     hits: (r) => (rule ? !!pbr(r, rule).hits : Object.values(r.picks_by_rule || {}).some((v) => v.hits)),
     results: (r) => r.status === "finished",
   }[view];
@@ -248,15 +249,19 @@ async function pageRaces() {
       `<div class="l3 pick-won">${ws.map((w) => `<span class="mark hit">◎ ${esc(w.name)} ${yen(w.payout)}</span>`).join("")}</div>`)).join("");
   } else if (view === "buy") {
     // 買い目: 選んだ買い方が買ったレース。全会場なら会場ごとに折りたたみ、見出しにその買い方のレース数と的中数
-    const buyRow = (r, inGroup) => {
-      const v = pbr(r, rule);
+    // 1つの買い方の行: 点数・金額・結果と、組み合わせ (当たりは緑の太字)
+    const ruleLines = (r, id) => {
+      const v = pbr(r, id);
+      if (!v.count) return "";
       const done = r.status === "finished" && v.hits != null;
       const res = done ? (v.hits ? ` <span class="mark hit">◎ ${yen(v.payout)}</span>` : ' <span class="mark miss">×</span>') : "";
       const hitCombo = r.result?.trifecta;
       const combos = (v.combos || []).map((c) => (c === hitCombo ? `<b class="combo-hit">${esc(c)}</b>` : esc(c))).join(" ");
-      return raceRow(r, inGroup, `<div class="l3 pick-won"><span>${esc(label[rule])} ${v.count}点・${yen(v.stake)}</span>${res}</div>`
-        + (combos ? `<div class="l3 combos num">${combos}</div>` : ""));
+      return `<div class="l3 pick-won"><span>${esc(label[id])} ${v.count}点・${yen(v.stake)}</span>${res}</div>`
+        + (combos ? `<div class="l3 combos num">${combos}</div>` : "");
     };
+    const buyRow = (r, inGroup) => raceRow(r, inGroup, ALL ? rules.map((x) => ruleLines(r, x.id)).join("") : ruleLines(r, rule));
+    const anyHit = (r) => (ALL ? Object.values(r.picks_by_rule || {}).some((v) => v.hits) : !!pbr(r, rule).hits);
     if (venue) {
       list = shown.map((r) => buyRow(r, true)).join("");
     } else {
@@ -265,13 +270,13 @@ async function pageRaces() {
       list = venues.map(([id, name]) => {
         const rs = shown.filter((r) => String(r.venue_id) === id);
         if (!rs.length) return "";
-        const hitN = rs.filter((r) => pbr(r, rule).hits).length;
+        const hitN = rs.filter(anyHit).length;
         const open = rs.filter(isOpen);
         return `<details class="venue-group"${nextOpen && String(nextOpen.venue_id) === id ? " open" : ""}>
           <summary>
             <span class="vname">${esc(name)}</span>
             <span class="vmeta muted small">${open.length ? `次 <b class="num">${hhmm(open[0].close_at)}</b>` : ""}</span>
-            <span class="vbadges"><span class="badge ${color === undefined ? "plain" : `pick${color}`}">${esc(label[rule])} ${rs.length}R</span>${hitN ? `<span class="mark hit">◎${hitN}</span>` : ""}</span>
+            <span class="vbadges"><span class="badge ${color === undefined ? "plain" : `pick${color}`}">${ALL ? "買い目" : esc(label[rule])} ${rs.length}R</span>${hitN ? `<span class="mark hit">◎${hitN}</span>` : ""}</span>
           </summary>
           ${rs.map((r) => buyRow(r, true)).join("")}
         </details>`;
@@ -310,7 +315,7 @@ async function pageRaces() {
   const viewSeg = Object.entries(VIEWS).map(([k, lab]) =>
     `<a class="seg${k === view ? " on" : ""}" href="?${qs({ date, venue, view: k, rule: ["buy", "hits"].includes(k) && rule ? rule : "" })}" aria-pressed="${k === view}">${lab}</a>`).join("");
   // 買い目・的中のときだけ、買い方を選ぶ行 (的中は「すべて」も)
-  const ruleChoices = (view === "hits" ? [["", "すべて"]] : []).concat(rules.map((x) => [x.id, x.label]));
+  const ruleChoices = [view === "hits" ? ["", "すべて"] : ["all", "すべて"]].concat(rules.map((x) => [x.id, x.label]));
   const ruleSeg = ["buy", "hits"].includes(view) ? `<nav class="segs rule-segs" aria-label="買い方">${ruleChoices.map(([id, lab]) =>
     `<a class="seg${id === rule ? " on" : ""}" href="?${qs({ date, venue, view, rule: id })}" aria-pressed="${id === rule}">${esc(lab)}</a>`).join("")}</nav>` : "";
   const venueSel = `<select id="venue-select" aria-label="会場">
@@ -437,8 +442,8 @@ async function pageRace() {
   }
   const r = d.race;
   document.title = `${r.venue_name} ${r.race_no}R ${fmtDate(date)} — ボートレース予想`;
-  main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), trifectaSection(r), picksSection(r, d.pick_rules),
-    resultSection(r), commentarySection(r)].join("");
+  main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), oddsSection(r), trifectaSection(r),
+    picksSection(r, d.pick_rules), resultSection(r), commentarySection(r)].join("");
 }
 
 function raceHead(r) {
@@ -673,6 +678,33 @@ function trifectaSection(r) {
     <div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。組み合わせの横の印はAIの買い目、◎ は的中、× は外れ。</div>`;
 }
 
+/** 3連単のオッズ表 (120通り)。公式と同じ並び: 1着の艇ごとに [2着 | 3着 | オッズ] の3列、2着は4行ずつまとめる。
+ *  締切オッズがあれば大きく、その下に1分前のオッズを ( ) で。締切前は、最後に取ったオッズだけ */
+function oddsSection(r) {
+  const snaps = (r.odds_snapshots || []).slice().sort((a, b) => a.min_to_close - b.min_to_close);
+  const t1 = snaps.find((x) => x.min_to_close === 1) || null;
+  const last = snaps[0] || null;
+  const closing = r.closing_odds || null;
+  const main = closing || (last && last.odds);
+  if (!main) return "";
+  const sub = closing && t1 ? t1.odds : null;
+  const hit = r.result?.trifecta;
+  const B = [1, 2, 3, 4, 5, 6];
+  const head = B.map((a) => `<th colspan="3" class="b${a} oh">${a}</th>`).join("");
+  const rows = Array.from({ length: 20 }, (_, i) => `<tr>${B.map((a) => {
+    const rest = B.filter((x) => x !== a);
+    const b = rest[Math.floor(i / 4)];
+    const c = rest.filter((x) => x !== b)[i % 4];
+    const k = `${a}-${b}-${c}`;
+    const second = i % 4 === 0 ? `<td rowspan="4" class="b${b} os">${b}</td>` : "";
+    const val = `<b class="num">${odds(main[k])}</b>` + (sub ? `<span class="o-sub num">(${odds(sub[k])})</span>` : "");
+    return `${second}<td class="b${c} ot">${c}</td><td class="ov${k === hit ? " is-hit" : ""}">${val}</td>`;
+  }).join("")}</tr>`).join("");
+  const what = closing ? `締切オッズ${sub ? "。( ) は1分前" : ""}` : `締切${last.min_to_close}分前のオッズ`;
+  return `<details class="odds-table"><summary><h2>3連単オッズ</h2> <span class="muted small">${what}</span></summary>
+    <div class="table-wrap"><table class="odds"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
 function picksSection(r, rules) {
   if (!rules || !rules.length) return "";
   const byRule = {};
@@ -820,7 +852,7 @@ function statsBlock(f, isSummary, isFun = false) {
     </ul>` : "";
   const table = isSummary ? summaryCards(f) : isFun ? funCards(f) : statsTable(f);
   const charts = (f.charts || []).map((c) => (c.unit === "yen" ? barChart(f, c) : lineChart(f, c))).join("");
-  const findings = (f.findings || []).length ? `<h3>読み取れたこと</h3><ul class="findings">${f.findings.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const findings = "";                                       // 「読み取れたこと」は出さない (2026-11-15)
   const sup = (f.superseded || []).map((x) => `<div class="superseded"><b>訂正</b> ${esc(x)}</div>`).join("");
   return `<details class="stats-block" id="${esc(f.id)}"${isSummary || isFun || f.id === "fun_monthly" ? " open" : ""}>
     <summary>${esc(f.title)}</summary>

@@ -629,7 +629,7 @@
      "additionalProperties": {
       "type": "number"
      },
-     "description": "trifecta に載っている組み合わせと、10倍以下の組み合わせだけ。全120通りは data/live_odds/",
+     "description": "3連単のオッズ。2026-11-15 から全120通り (それより前は trifecta に載っている組み合わせと10倍以下だけ)",
      "title": "Odds",
      "type": "object"
     }
@@ -1079,6 +1079,22 @@
      },
      "title": "Odds Snapshots",
      "type": "array"
+    },
+    "closing_odds": {
+     "anyOf": [
+      {
+       "additionalProperties": {
+        "type": "number"
+       },
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "締切オッズ (確定オッズ、3連単120通り)。結果を取ったときにオッズのページから取る。それまでは null",
+     "title": "Closing Odds"
     },
     "picks": {
      "items": {

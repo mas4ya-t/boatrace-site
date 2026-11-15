@@ -349,7 +349,7 @@
     },
     "picks": {
      "$ref": "#/$defs/ListPicks",
-     "description": "検証用の steady (オッズ10倍以下・期待値1.0超) の picks"
+     "description": "picks (オッズ10倍以下・期待値1.0超) の買い目"
     },
     "picks_by_rule": {
      "additionalProperties": {

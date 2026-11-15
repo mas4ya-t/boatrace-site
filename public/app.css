@@ -86,7 +86,7 @@ h3 { font-size: .95rem; margin: 12px 0 4px; }
 }
 .site-header nav a[aria-current="page"] { background: var(--card); color: var(--fg); font-weight: 600; }
 main { max-width: 760px; margin: 0 auto; padding: 12px 12px 32px; }
-body[data-page="index"] main { padding-bottom: 96px; }   /* 下に固定した日付バーの分 */
+body[data-page="races"] main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }   /* 下に固定した日付バーの分 (最後のレースが隠れないように) */
 
 /* ─── 注意書き (picks の直下に読める大きさで) ─── */
 .notice {
@@ -456,3 +456,19 @@ td.cbest.low, td.cworst.low { opacity: 1; }
 /* 買い目の表示: 組み合わせを平文で並べる。当たった組み合わせは太字で緑 */
 .race-row .l3.combos { flex-wrap: wrap; gap: 2px 10px; color: var(--muted); font-size: .84rem; }
 .race-row .l3.combos .combo-hit { color: #1a7f37; }
+
+/* 3連単オッズ表 (レース詳細)。押すまで閉じておく */
+details.odds-table > summary { display: flex; align-items: baseline; gap: 8px; cursor: pointer; list-style: none; }
+details.odds-table > summary::-webkit-details-marker { display: none; }
+details.odds-table > summary::before { content: "▸"; color: var(--muted); }
+details.odds-table[open] > summary::before { content: "▾"; }
+details.odds-table > summary h2 { margin: 0; }
+table.odds { font-size: .82rem; border-collapse: separate; border-spacing: 3px; }
+table.odds th, table.odds td { border: 0; }
+table.odds th.oh { text-align: center; padding: 4px 0; font-weight: 700; border-radius: 6px; }
+table.odds td.os, table.odds td.ot { text-align: center; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+table.odds td.b1, table.odds th.b1 { box-shadow: inset 0 0 0 1px #8c959f; }
+table.odds td.ov { text-align: right; white-space: nowrap; padding: 3px 9px 3px 6px; min-width: 4.2em; line-height: 1.2;
+  background: var(--card); border-radius: 6px; }
+table.odds td.ov.is-hit { background: var(--hit-bg); }
+table.odds .o-sub { display: block; color: var(--muted); font-size: .72rem; }
