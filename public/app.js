@@ -129,7 +129,7 @@ async function pageHome() {
   const pickHits = collect((r) => hitsOf(r, (id) => id === MAIN_RULE));
   const allHits = collect((r) => [
     ...(r.top_trifecta?.hit && r.result ? [{ name: `予想1位 ${r.top_trifecta.combo}`, payout: r.result.payout || 0 }] : []),
-    ...hitsOf(r, (id) => id !== MAIN_RULE)]);
+    ...hitsOf(r, (id) => id !== MAIN_RULE && id !== "honsen")]);   // picks・本線は自分の欄に出す
   const wonRows = (list) => list.slice(0, 5).map(({ r, won }) => raceRow(r, false,
     `<div class="l3 pick-won">${won.map((w) => `<span class="mark hit">◎ ${esc(w.name)} ${yen(w.payout)}</span>`).join("")}</div>`)).join("");
 
