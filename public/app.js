@@ -105,17 +105,20 @@ async function pageHome() {
   const open = isToday ? races.filter(isOpen) : [];
 
   const soon = open.slice(0, 3);
-  const TOKUSEN = "tokusen";
-  const tokRaces = races.filter((r) => (r.picks_by_rule?.[TOKUSEN]?.count || 0) > 0);
-  const tokDetails = await Promise.all(tokRaces.map((r) => getJSON(`data/${r.detail}`).catch(() => null)));
-  const tokRows = tokRaces.map((r, i) => {
-    const ps = (tokDetails[i]?.race?.picks || []).filter((p) => p.rule === TOKUSEN);
-    const v = r.picks_by_rule[TOKUSEN];
-    const settled = r.status === "finished" && v.hits != null;
-    const combos = ps.map((p) => `<span class="mark${p.hit ? " hit" : ""}"><b class="num">${esc(p.combo)}</b> ${yen(p.stake)}${isNum(p.odds) ? ` <span class="muted">${odds(p.odds)}倍</span>` : ""}</span>`).join(" ");
-    const result = settled ? (v.hits ? ` <span class="mark hit">◎ 払戻 ${yen(v.payout)}</span>` : ' <span class="mark miss">×</span>') : "";
-    return raceRow(r, false, `<div class="l3 pick-won">${combos || `<span class="muted">${v.count}点・${yen(v.stake)}</span>`}${result}</div>`);
-  }).join("");
+  // 特選・本線: その日の対象レースと買い目・結果 (詳細 JSON の race.picks)
+  const ruleRows = async (rule) => {
+    const rs = races.filter((r) => (r.picks_by_rule?.[rule]?.count || 0) > 0);
+    const det = await Promise.all(rs.map((r) => getJSON(`data/${r.detail}`).catch(() => null)));
+    return rs.map((r, i) => {
+      const ps = (det[i]?.race?.picks || []).filter((p) => p.rule === rule);
+      const v = r.picks_by_rule[rule];
+      const settled = r.status === "finished" && v.hits != null;
+      const combos = ps.map((p) => `<span class="mark${p.hit ? " hit" : ""}"><b class="num">${esc(p.combo)}</b> ${yen(p.stake)}${isNum(p.odds) ? ` <span class="muted">${odds(p.odds)}倍</span>` : ""}</span>`).join(" ");
+      const result = settled ? (v.hits ? ` <span class="mark hit">◎ 払戻 ${yen(v.payout)}</span>` : ' <span class="mark miss">×</span>') : "";
+      return raceRow(r, false, `<div class="l3 pick-won">${combos || `<span class="muted">${v.count}点・${yen(v.stake)}</span>`}${result}</div>`);
+    }).join("");
+  };
+  const [tokRows, honRows] = await Promise.all([ruleRows("tokusen"), ruleRows("honsen")]);
   // 当たった買い方と払戻 (一覧の picks_by_rule)。picks = MAIN_RULE (一覧の「買」)、いろいろな的中 = 予想の3連単1位 + ほかの買い方
   const rules = day?.pick_rules || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
@@ -132,12 +135,13 @@ async function pageHome() {
 
   const section = (title, sub, body, link = "") =>
     `<section class="home-sec"><h2>${title}${sub ? ` <span class="muted small">${sub}</span>` : ""}</h2>${body}${link}</section>`;
-  const HOME_RULES = ["特選", "picks", "本線"];       // ホームの「AIの成績」に出す買い方 (stats/fun.json の rule = 表示名)
+  const HOME_RULES = ["特選", "picks", "本線", "的中重視"];       // ホームの「AIの成績」に出す買い方 (stats/fun.json の rule = 表示名)
   const homeRows = (fun?.rows || []).filter((r) => HOME_RULES.includes(r.rule));
   const funCardsMini = homeRows.length ? `<div class="mini-grid">${homeRows.map((r) => `
       <a class="mini" href="stats.html#fun">
         <div class="mini-label">${esc(r.rule)}</div>
         ${r.races ? `<div class="mini-row"><span class="muted small">的中率</span><b class="num">${pct(r.race_hit_rate, 0)}</b></div>
+          <div class="mini-row"><span class="muted small">回収率</span><b class="num">${r.roi?.value == null ? "—" : pct(r.roi.value, 0)}</b></div>
           <div class="mini-row"><span class="muted small">最高</span><b class="num">${r.max_payout == null ? "—" : yen(r.max_payout)}</b></div>
           <div class="mini-row"><span class="muted small">連続ハズレ</span><b class="num">${int(r.current_streak)}</b></div>`
         : `<div class="faint small">記録中</div>`}
@@ -157,7 +161,9 @@ async function pageHome() {
       `<a class="more" href="races.html?date=${date}&view=next">締切前のレースをすべて見る</a>`) : ""}
     ${section("特選", "",
       tokRows || `<div class="empty">${isToday ? "今日" : "この日"}は特選のレースはありません</div>`)}
-    ${section(isToday ? "今日の picks の的中" : "この日の picks の的中", pickHits.length ? `オッズ10倍以下・期待値1.0超・${pickHits.length}レース` : "オッズ10倍以下・期待値1.0超",
+    ${section("本線", "",
+      honRows || `<div class="empty">${isToday ? "今日" : "この日"}は本線のレースはありません</div>`)}
+    ${section("picks", pickHits.length ? `オッズ10倍以下・期待値1.0超・${pickHits.length}レース` : "オッズ10倍以下・期待値1.0超",
       pickHits.length ? wonRows(pickHits) : '<div class="empty">まだありません</div>',
       pickHits.length > 5 ? `<a class="more" href="races.html?date=${date}&view=hits">的中したレースをすべて見る</a>` : "")}
     ${section(isToday ? "今日の的中" : "この日の的中", allHits.length ? `予想1位・ほかの買い方・${allHits.length}レース・払戻の多い順` : "予想1位・ほかの買い方",
