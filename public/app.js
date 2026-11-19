@@ -106,8 +106,8 @@ async function pageHome() {
 
   const soon = open.slice(0, 3);
   // 特選・本線: その日の対象レースと買い目・結果 (詳細 JSON の race.picks)
-  const ruleRows = async (rule) => {
-    const rs = races.filter((r) => (r.picks_by_rule?.[rule]?.count || 0) > 0);
+  const ruleRows = async (rule, onlyHits = false) => {
+    const rs = races.filter((r) => (r.picks_by_rule?.[rule]?.count || 0) > 0 && (!onlyHits || r.picks_by_rule[rule].hits));
     const det = await Promise.all(rs.map((r) => getJSON(`data/${r.detail}`).catch(() => null)));
     return rs.map((r, i) => {
       const ps = (det[i]?.race?.picks || []).filter((p) => p.rule === rule);
@@ -118,7 +118,7 @@ async function pageHome() {
       return raceRow(r, false, `<div class="l3 pick-won">${combos || `<span class="muted">${v.count}点・${yen(v.stake)}</span>`}${result}</div>`);
     }).join("");
   };
-  const [tokRows, honRows] = await Promise.all([ruleRows("tokusen"), ruleRows("honsen")]);
+  const [tokRows, honRows] = await Promise.all([ruleRows("tokusen"), ruleRows("honsen", true)]);
   // 当たった買い方と払戻 (一覧の picks_by_rule)。picks = MAIN_RULE (一覧の「買」)、いろいろな的中 = 予想の3連単1位 + ほかの買い方
   const rules = day?.pick_rules || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
@@ -161,11 +161,11 @@ async function pageHome() {
       `<a class="more" href="races.html?date=${date}&view=next">締切前のレースをすべて見る</a>`) : ""}
     ${section("特選", "",
       tokRows || `<div class="empty">${isToday ? "今日" : "この日"}は特選のレースはありません</div>`)}
-    ${section("本線", "",
-      honRows || `<div class="empty">${isToday ? "今日" : "この日"}は本線のレースはありません</div>`)}
     ${section("picks", pickHits.length ? `オッズ10倍以下・期待値1.0超・${pickHits.length}レース` : "オッズ10倍以下・期待値1.0超",
       pickHits.length ? wonRows(pickHits) : '<div class="empty">まだありません</div>',
       pickHits.length > 5 ? `<a class="more" href="races.html?date=${date}&view=hits">的中したレースをすべて見る</a>` : "")}
+    ${section("本線", "的中したレース",
+      honRows || '<div class="empty">まだありません</div>')}
     ${section(isToday ? "今日の的中" : "この日の的中", allHits.length ? `予想1位・ほかの買い方・${allHits.length}レース・払戻の多い順` : "予想1位・ほかの買い方",
       allHits.length ? wonRows(allHits) : '<div class="empty">まだありません</div>',
       allHits.length > 5 ? `<a class="more" href="races.html?date=${date}&view=results">結果の出たレースをすべて見る</a>` : "")}
