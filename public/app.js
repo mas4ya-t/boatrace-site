@@ -135,7 +135,7 @@ async function pageHome() {
 
   const section = (title, sub, body, link = "") =>
     `<section class="home-sec"><h2>${title}${sub ? ` <span class="muted small">${sub}</span>` : ""}</h2>${body}${link}</section>`;
-  const HOME_RULES = ["特選", "picks", "本線", "的中重視"];       // ホームの「AIの成績」に出す買い方 (stats/fun.json の rule = 表示名)
+  const HOME_RULES = ["特選", "picks", "本線", "的中重視", "市場基準"];       // ホームの「AIの成績」に出す買い方 (stats/fun.json の rule = 表示名)
   const homeRows = (fun?.rows || []).filter((r) => HOME_RULES.includes(r.rule));
   const funCardsMini = homeRows.length ? `<div class="mini-grid">${homeRows.map((r) => `
       <a class="mini" href="stats.html#fun">
@@ -732,6 +732,7 @@ function picksSection(r, rules) {
         taiko_suji: ["対象外", "このレースは対象外"],
         picks: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "オッズ10倍以下・期待値1.0超の組み合わせはありません。"],
         ana: ["オッズ待ち", "締切前のオッズを取ってから判定します。"],
+        market: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の確率で期待値1.0超の組み合わせはありません。"],
       }[rule.id] || ["なし", "この条件に合う買い目はありません。"];
       body = `<p class="muted small">${why[1]}</p>`;
       head = `<span class="muted">${why[0]}</span>`;
