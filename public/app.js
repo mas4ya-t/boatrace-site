@@ -154,7 +154,7 @@ async function pageHome() {
     </section>
     <section class="home-sec today">
       <h2>${isToday ? "今日" : "最新"} <span class="muted small">${fmtDate(date)}</span></h2>
-      ${races.length ? daySummary(races, isToday, isOpen) : '<div class="muted">データがありません</div>'}
+      ${races.length ? daySummary(races, isToday, isOpen, day?.pick_rules) : '<div class="muted">データがありません</div>'}
     </section>
     ${races.length ? section("会場", isToday ? "残りレース数・次の締切" : "", venueGrid(races, date, isToday, isOpen)) : ""}
     ${soon.length ? section("もうすぐ締切", "", soon.map((r) => raceRow(r)).join(""),
@@ -331,7 +331,7 @@ async function pageRaces() {
 
   main.innerHTML = `
     <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
-    ${daySummary(races, isToday, isOpen)}
+    ${daySummary(races, isToday, isOpen, day.pick_rules)}
     <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
     ${ruleSeg}
     <div id="races">${list}</div>`;
@@ -361,7 +361,7 @@ function venueGrid(races, date, isToday, isOpen) {
 }
 
 /** その日の状況 (予想済み・picks の成績・次の締切) */
-function daySummary(races, isToday, isOpen) {
+function daySummary(races, isToday, isOpen, rules) {
   const predicted = races.filter((r) => r.top_flag).length;
   const pk = races.reduce((a, r) => {
     const p = r.picks || {};
@@ -385,13 +385,29 @@ function daySummary(races, isToday, isOpen) {
   const raceLine = (cls, label, x) => `<div class="ds-line"><span class="badge pick ${cls}">${label}</span> <b class="num">${x.count}</b>レース${
     x.done ? `（結果 ${x.done}レース・的中 <b class="num">${x.hits}</b>${roiOf(x)}）` : ""}</div>`;
   const next = isToday ? races.filter(isOpen)[0] : null;
+  // 全部の買い方の収支 (結果の出たレースだけ)。並びは一覧 JSON の pick_rules の順、最後に合計
+  const ids = rules?.length ? rules.map((x) => x.id) : [...new Set(races.flatMap((r) => Object.keys(r.picks_by_rule || {})))];
+  const label = Object.fromEntries((rules || []).map((x) => [x.id, x.label]));
+  const pl = ids.map((id) => ({ id, name: label[id] || id, ...byRace(id) })).filter((x) => x.count);
+  const tot = pl.reduce((a, x) => ({ stake: a.stake + x.stake, payout: a.payout + x.payout }), { stake: 0, payout: 0 });
+  const plCell = (x) => (x.done ? `<td class="r num">${yen(x.stake)}</td><td class="r num">${yen(x.payout)}</td>
+      <td class="r num ${x.payout > x.stake ? "pos" : x.payout < x.stake ? "neg" : ""}"><b>${yenSigned(x.payout - x.stake)}</b></td>
+      <td class="r num">${x.stake ? pct(x.payout / x.stake, 0) : "—"}</td>` : '<td class="r faint" colspan="4">結果待ち</td>');
+  const plTable = pl.length ? `<details class="day-pl"${tot.stake ? " open" : ""}>
+    <summary>${isToday ? "今日" : "この日"}の収支 <span class="muted small">全部の買い方・結果の出たレース</span>${
+      tot.stake ? ` <b class="num ${tot.payout > tot.stake ? "pos" : tot.payout < tot.stake ? "neg" : ""}">${yenSigned(tot.payout - tot.stake)}</b>` : ""}</summary>
+    <div class="table-wrap"><table>
+      <thead><tr><th>買い方</th><th class="r">結果/買</th><th class="r">的中</th><th class="r">投資</th><th class="r">払戻</th><th class="r">収支</th><th class="r">回収率</th></tr></thead>
+      <tbody>${pl.map((x) => `<tr><td>${esc(x.name)}</td><td class="r num">${x.done}/${x.count}R</td><td class="r num">${x.done ? x.hits : "—"}</td>${plCell(x)}</tr>`).join("")}
+        ${tot.stake ? `<tr class="pl-total"><td><b>合計</b></td><td></td><td class="r num">${pl.reduce((a, x) => a + x.hits, 0)}</td>${plCell({ done: 1, ...tot })}</tr>` : ""}</tbody>
+    </table></div></details>` : "";
   return `<div class="day-sum">
     <div><span class="muted">予想済み</span> <b class="num">${predicted}</b> / ${races.length}</div>
     ${next ? `<div><span class="muted">次の締切</span> <a href="race.html?id=${encodeURIComponent(next.race_id)}&date=${dateFromRaceId(next.race_id)}">${esc(next.venue_name)} ${next.race_no}R <b class="num">${hhmm(next.close_at)}</b></a></div>` : ""}
     ${raceLine("gold", "特選", byRace("tokusen"))}
     <div class="ds-line"><span class="badge pick">picks</span> <b class="num">${pk.count}</b>点${pk.done ? `（結果 ${pk.done}点・的中 <b class="num">${pk.hits}</b>${roiOf(pk)}）` : ""}</div>
     ${raceLine("blue", "本線", byRace("honsen"))}
-  </div>`;
+  </div>${plTable}`;
 }
 
 /** 一覧の1レース (軽い版)。6艇は出さず、本命 (1着確率が最も高い艇) だけ。会場ごとにまとめた中では会場名を省く */
