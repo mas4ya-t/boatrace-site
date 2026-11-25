@@ -466,6 +466,7 @@ async function pageRace() {
   document.title = `${r.venue_name} ${r.race_no}R ${fmtDate(date)} — ボートレース予想`;
   main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), oddsSection(r), trifectaSection(r),
     picksSection(r, d.pick_rules), resultSection(r), commentarySection(r)].join("");
+  bindTriSegs(main);
 }
 
 function raceHead(r) {
@@ -683,21 +684,45 @@ function partnersHtml(s) {
 
 function trifectaSection(r) {
   if (!r.trifecta) return "";
-  const picks = new Set((r.picks || []).filter((p) => ruleId(p.rule) === MAIN_RULE).map((p) => p.combo));
-  const tokusen = new Set((r.picks || []).filter((p) => p.rule === "tokusen").map((p) => p.combo));
-  const honsen = new Set((r.picks || []).filter((p) => p.rule === "honsen").map((p) => p.combo));
-  const rows = r.trifecta.slice().sort((a, b) => a.rank - b.rank).slice(0, 10).map((t) => `
+  const has = (rule) => new Set((r.picks || []).filter((p) => ruleId(p.rule) === rule).map((p) => p.combo));
+  const badge = (set, label, cls, combo) => (set.has(combo) ? ` <span class="badge pick${cls ? " " + cls : ""}" title="${label}">${label}</span>` : "");
+  const tableOf = (list, marks) => {
+    const rows = list.slice().sort((a, b) => a.rank - b.rank).slice(0, 10).map((t) => `
     <tr class="${t.hit ? "is-hit" : ""}">
       <td class="r num">${t.rank}</td>
-      <td class="num">${esc(t.combo)}${tokusen.has(t.combo) ? ' <span class="badge pick gold" title="特選">特選</span>' : ""}${honsen.has(t.combo) ? ' <span class="badge pick blue" title="本線">本線</span>' : ""}${picks.has(t.combo) ? ' <span class="badge pick" title="picks">picks</span>' : ""}</td>
+      <td class="num">${esc(t.combo)}${marks(t.combo)}</td>
       <td class="r num">${pct(t.prob)}</td><td class="r num">${odds(t.odds)}</td><td class="r num">${ev(t.ev)}</td>
       <td>${r.status === "finished" ? markShort(t.hit) : ""}</td>
     </tr>`).join("");
-  return `<h2>3連単の上位10</h2>
-    <div class="table-wrap"><table>
+    return `<div class="table-wrap"><table>
       <thead><tr><th class="r">順位</th><th>組み合わせ</th><th class="r">確率</th><th class="r">オッズ</th><th class="r">期待値</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。組み合わせの横の印はAIの買い目、◎ は的中、× は外れ。</div>`;
+      <tbody>${rows}</tbody></table></div>`;
+  };
+  const picks = has(MAIN_RULE), tokusen = has("tokusen"), honsen = has("honsen");
+  const std = tableOf(r.trifecta, (c) => badge(tokusen, "特選", "gold", c) + badge(honsen, "本線", "blue", c) + badge(picks, "picks", "", c));
+  const note = `<div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。組み合わせの横の印はAIの買い目、◎ は的中、× は外れ。</div>`;
+  if (!r.trifecta_market) return `<h2>3連単の上位10</h2>${std}${note}`;
+  const market = has("market"), m620 = has("market_6_20");
+  const mkt = tableOf(r.trifecta_market, (c) => badge(market, "市場基準", "", c) + badge(m620, "6〜20", "blue", c));
+  // 標準モデルと市場基準を切り替える (押すまで標準モデル)
+  return `<h2>3連単の上位10</h2>
+    <div class="segs tri-segs" role="group" aria-label="確率のモデル">
+      <button type="button" class="seg on" data-tri="std" aria-pressed="true">標準モデル</button>
+      <button type="button" class="seg" data-tri="mkt" aria-pressed="false">市場基準</button></div>
+    <div data-tri-panel="std">${std}</div>
+    <div data-tri-panel="mkt" hidden>${mkt}
+      <div class="faint small">市場基準は、締切前に最後に取ったオッズを土台にして、モデルでずれを直した確率。順位は市場基準の確率の順。</div></div>
+    ${note}`;
+}
+
+/** 確率の表の「標準モデル / 市場基準」の切り替え */
+function bindTriSegs(root) {
+  root.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tri]");
+    if (!b) return;
+    root.querySelectorAll("[data-tri]").forEach((x) => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
+    root.querySelectorAll("[data-tri-panel]").forEach((p) => { p.hidden = p.dataset.triPanel !== b.dataset.tri; });
+  });
 }
 
 /** 3連単のオッズ表 (120通り)。公式と同じ並び: 1着の艇ごとに [2着 | 3着 | オッズ] の3列、2着は4行ずつまとめる。

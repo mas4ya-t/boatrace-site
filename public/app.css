@@ -309,6 +309,10 @@ details.day-pl tr.pl-total td { border-top: 2px solid var(--line); }
 .rule-segs .seg { min-height: 34px; font-size: .82rem; border-top: 1px solid var(--line); }
 .rule-segs .seg:nth-child(-n+4) { border-top: 0; }
 .rule-segs .seg:nth-child(4n+1) { border-left: 0; }
+/* 3連単の上位10: 標準モデル / 市場基準 の切り替え */
+.tri-segs { grid-template-columns: repeat(2, 1fr); max-width: 320px; margin: 0 0 8px; }
+.tri-segs .seg { min-height: 34px; background: var(--bg); font: inherit; font-size: .85rem; cursor: pointer; border-top: 0; border-right: 0; border-bottom: 0; }
+.tri-segs .seg.on { background: var(--fg); color: var(--bg); font-weight: 700; }
 .small-notice { font-size: .85rem; padding: 6px 10px; }
 .small-notice strong { margin: 0; }
 .small-notice details summary { cursor: pointer; color: var(--accent); margin-top: 2px; }
