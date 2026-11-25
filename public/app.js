@@ -9,6 +9,25 @@ const GROUPS = [
 ];
 const ruleId = (r) => r;
 const MAIN_RULE = "picks";        // 一覧の「買」・ホームの「今日の picks の的中」に使うルール (predict/picks.py の MAIN_RULE)
+// 記録をやめた買い方 (2026-11-25 まで)。2026-11-26 にサイトの記録から消した。古い JSON が残っていても表示・集計しない
+const HIDDEN_RULES = new Set(["market_mid", "market_wide", "taiko_suji"]);
+// 表示名を変えた買い方 (過去の日の JSON の pick_rules も新しい名前で出す)。market_6_20 は 2026-11-25 まで「市場基準・6〜20番人気」
+const RULE_LABELS = { market_6_20: "市場基準・中穴" };
+const shownRules = (rules) => (rules || []).filter((x) => !HIDDEN_RULES.has(x.id))
+  .map((x) => (RULE_LABELS[x.id] ? { ...x, label: RULE_LABELS[x.id] } : x));
+// id の無い古い stats/fun.json・rules.json 用 (表示名で外す)。古い「市場基準・中穴」は 11〜20番人気 (market_mid) の方
+const HIDDEN_LABELS = new Set(["市場基準・中穴", "市場基準・1着流し", "対抗・筋"]);
+const OLD_RULE_LABELS = { "市場基準・6〜20番人気": "市場基準・中穴" };
+// 成績 (stats/fun.json・fun_monthly.json・rules.json) から、記録をやめた買い方の行・列を外す
+const dropRetired = (f) => (f ? {
+  ...f,
+  rows: (f.rows || []).filter((r) => (r.id ? !HIDDEN_RULES.has(r.id) : !HIDDEN_LABELS.has(r.rule)))
+    .map((r) => (r.rule in OLD_RULE_LABELS ? { ...r, rule: OLD_RULE_LABELS[r.rule] } : r)),
+  columns: (f.columns || []).filter((c) => !HIDDEN_RULES.has(c.key))
+    .map((c) => (RULE_LABELS[c.key] ? { ...c, label: RULE_LABELS[c.key] } : c)),
+  charts: (f.charts || []).map((c) => (Array.isArray(c.y) ? { ...c, y: c.y.filter((k) => !HIDDEN_RULES.has(k)) } : c)),
+} : f);
+
 
 const STATUS = {
   scheduled: "予想前", predicted: "予想済", closed: "締切・結果待ち", finished: "確定", cancelled: "中止・結果なし",
@@ -97,7 +116,7 @@ async function pageHome() {
   const date = index.latest_date;
   if (!date) return showEmpty(main, "まだレースのデータがありません");
   const [day, fun] = await Promise.all([getJSON(`data/races/${date}.json`).catch(() => null),
-    getJSON("data/stats/fun.json").catch(() => null)]);
+    getJSON("data/stats/fun.json").then(dropRetired).catch(() => null)]);
   const races = (day?.races || []).slice().sort(byClose);
   const now = Date.now();
   const isToday = date === todayJST();
@@ -120,7 +139,7 @@ async function pageHome() {
   };
   const [tokRows, honRows] = await Promise.all([ruleRows("tokusen"), ruleRows("honsen", true)]);
   // 当たった買い方と払戻 (一覧の picks_by_rule)。picks = MAIN_RULE (一覧の「買」)、いろいろな的中 = 予想の3連単1位 + ほかの買い方
-  const rules = day?.pick_rules || [];
+  const rules = shownRules(day?.pick_rules) || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
   const hitsOf = (r, keep) => Object.entries(r.picks_by_rule || {}).filter(([id, v]) => v.hits && keep(id))
     .map(([id, v]) => ({ name: label[id] || id, payout: v.payout || 0 }));
@@ -154,7 +173,7 @@ async function pageHome() {
     </section>
     <section class="home-sec today">
       <h2>${isToday ? "今日" : "最新"} <span class="muted small">${fmtDate(date)}</span></h2>
-      ${races.length ? daySummary(races, isToday, isOpen, day?.pick_rules) : '<div class="muted">データがありません</div>'}
+      ${races.length ? daySummary(races, isToday, isOpen, shownRules(day?.pick_rules)) : '<div class="muted">データがありません</div>'}
     </section>
     ${races.length ? section("会場", isToday ? "残りレース数・次の締切" : "", venueGrid(races, date, isToday, isOpen)) : ""}
     ${soon.length ? section("もうすぐ締切", "", soon.map((r) => raceRow(r)).join(""),
@@ -224,7 +243,7 @@ async function pageRaces() {
   const venues = [...new Map(races.map((r) => [String(r.venue_id), r.venue_name])).entries()];
   const inVenue = venue ? races.filter((r) => String(r.venue_id) === venue) : races;
   // 買い方で絞る (URL の rule)。買い目 = その買い方が見送らずに買ったレース、的中 = 当たったレース (rule が無ければどれか)
-  const rules = day.pick_rules || [];
+  const rules = shownRules(day.pick_rules) || [];
   const label = Object.fromEntries(rules.map((x) => [x.id, x.label]));
   let rule = q.get("rule") || "";
   if (rule && !label[rule] && !(view === "buy" && rule === "all")) rule = "";
@@ -331,7 +350,7 @@ async function pageRaces() {
 
   main.innerHTML = `
     <div class="day-title"><h1>${fmtDate(date)}</h1><span class="muted small">${races.length} レース</span></div>
-    ${daySummary(races, isToday, isOpen, day.pick_rules)}
+    ${daySummary(races, isToday, isOpen, shownRules(day.pick_rules), false)}
     <div class="ctrl">${venueSel}<nav class="segs" aria-label="表示">${viewSeg}</nav></div>
     ${ruleSeg}
     <div id="races">${list}</div>`;
@@ -361,7 +380,7 @@ function venueGrid(races, date, isToday, isOpen) {
 }
 
 /** その日の状況 (予想済み・picks の成績・次の締切) */
-function daySummary(races, isToday, isOpen, rules) {
+function daySummary(races, isToday, isOpen, rules, plOpen = true) {
   const predicted = races.filter((r) => r.top_flag).length;
   const pk = races.reduce((a, r) => {
     const p = r.picks || {};
@@ -386,14 +405,14 @@ function daySummary(races, isToday, isOpen, rules) {
     x.done ? `（結果 ${x.done}レース・的中 <b class="num">${x.hits}</b>${roiOf(x)}）` : ""}</div>`;
   const next = isToday ? races.filter(isOpen)[0] : null;
   // 全部の買い方の収支 (結果の出たレースだけ)。並びは一覧 JSON の pick_rules の順、最後に合計
-  const ids = rules?.length ? rules.map((x) => x.id) : [...new Set(races.flatMap((r) => Object.keys(r.picks_by_rule || {})))];
+  const ids = rules?.length ? rules.map((x) => x.id) : [...new Set(races.flatMap((r) => Object.keys(r.picks_by_rule || {})))].filter((id) => !HIDDEN_RULES.has(id));
   const label = Object.fromEntries((rules || []).map((x) => [x.id, x.label]));
   const pl = ids.map((id) => ({ id, name: label[id] || id, ...byRace(id) })).filter((x) => x.count);
   const tot = pl.reduce((a, x) => ({ stake: a.stake + x.stake, payout: a.payout + x.payout }), { stake: 0, payout: 0 });
   const plCell = (x) => (x.done ? `<td class="r num">${yen(x.stake)}</td><td class="r num">${yen(x.payout)}</td>
       <td class="r num ${x.payout > x.stake ? "pos" : x.payout < x.stake ? "neg" : ""}"><b>${yenSigned(x.payout - x.stake)}</b></td>
       <td class="r num">${x.stake ? pct(x.payout / x.stake, 0) : "—"}</td>` : '<td class="r faint" colspan="4">結果待ち</td>');
-  const plTable = pl.length ? `<details class="day-pl"${tot.stake ? " open" : ""}>
+  const plTable = pl.length ? `<details class="day-pl"${plOpen && tot.stake ? " open" : ""}>
     <summary>${isToday ? "今日" : "この日"}の収支 <span class="muted small">全部の買い方・結果の出たレース</span>${
       tot.stake ? ` <b class="num ${tot.payout > tot.stake ? "pos" : tot.payout < tot.stake ? "neg" : ""}">${yenSigned(tot.payout - tot.stake)}</b>` : ""}</summary>
     <div class="table-wrap"><table>
@@ -465,7 +484,7 @@ async function pageRace() {
   const r = d.race;
   document.title = `${r.venue_name} ${r.race_no}R ${fmtDate(date)} — ボートレース予想`;
   main.innerHTML = back + [raceHead(r), flagsSection(r), entriesSection(r), oddsSection(r), trifectaSection(r),
-    picksSection(r, d.pick_rules), resultSection(r), commentarySection(r)].join("");
+    picksSection(r, shownRules(d.pick_rules)), resultSection(r), commentarySection(r)].join("");
   bindTriSegs(main);
 }
 
@@ -702,8 +721,8 @@ function trifectaSection(r) {
   const std = tableOf(r.trifecta, (c) => badge(tokusen, "特選", "gold", c) + badge(honsen, "本線", "blue", c) + badge(picks, "picks", "", c));
   const note = `<div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。組み合わせの横の印はAIの買い目、◎ は的中、× は外れ。</div>`;
   if (!r.trifecta_market) return `<h2>3連単の上位10</h2>${std}${note}`;
-  const market = has("market"), m620 = has("market_6_20");
-  const mkt = tableOf(r.trifecta_market, (c) => badge(market, "市場基準", "", c) + badge(m620, "6〜20", "blue", c));
+  const market = has("market"), m620 = has("market_6_20"), r1 = has("market_r1");
+  const mkt = tableOf(r.trifecta_market, (c) => badge(market, "市場基準", "", c) + badge(m620, "中穴", "blue", c) + badge(r1, "R1", "gold", c));
   // 標準モデルと市場基準を切り替える (押すまで標準モデル)
   return `<h2>3連単の上位10</h2>
     <div class="segs tri-segs" role="group" aria-label="確率のモデル">
@@ -776,7 +795,7 @@ function picksSection(r, rules) {
         market: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の確率で期待値1.0超の組み合わせはありません。"],
         market_mid: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の買い目に11〜20番人気の組み合わせはありません。"],
         market_6_20: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の買い目に6〜20番人気の組み合わせはありません。"],
-        market_wide: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の確率で期待値1.0超の組み合わせはありません。"],
+        market_r1: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準とH1の両方で期待値1.0超の組み合わせはありません。"],
       }[rule.id] || ["なし", "この条件に合う買い目はありません。"];
       body = `<p class="muted small">${why[1]}</p>`;
       head = `<span class="muted">${why[0]}</span>`;
@@ -825,7 +844,7 @@ function picksSection(r, rules) {
     if (!rs.length) return "";
     const taiko = rs.filter((x) => x.id in SUBS);
     const blocks = rs.filter((x) => !(x.id in SUBS) || x.id === "taiko")
-      .map((x) => (x.id === "taiko" && taiko.length ? taikoBlock(taiko) : ruleBlock(x)));
+      .map((x) => (x.id === "taiko" && taiko.length > 1 ? taikoBlock(taiko) : ruleBlock(x)));
     return `<h2>${g.title}</h2><div class="muted small">${g.note}</div>
       ${blocks.join("")}`;
   }).join("");
@@ -868,7 +887,8 @@ async function pageStats() {
   }
   const ids = index.stats_files || [];
   if (!ids.length) return showEmpty(main);
-  const files = await Promise.all(ids.map((id) => getJSON(`data/stats/${id}.json`).catch(() => null)));
+  const files = await Promise.all(ids.map((id) => getJSON(`data/stats/${id}.json`)
+    .then((f) => (["fun", "fun_monthly", "rules"].includes(id) ? dropRetired(f) : f)).catch(() => null)));
   const FUN_IDS = new Set(["fun", "fun_monthly", "rules"]);
   let html = `<h1>成績</h1>`, lastGroup = null;
   files.forEach((f, i) => {
