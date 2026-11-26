@@ -9,8 +9,8 @@ const GROUPS = [
 ];
 const ruleId = (r) => r;
 const MAIN_RULE = "picks";        // 一覧の「買」・ホームの「今日の picks の的中」に使うルール (predict/picks.py の MAIN_RULE)
-// 記録をやめた買い方 (2026-11-25 まで)。2026-11-26 にサイトの記録から消した。古い JSON が残っていても表示・集計しない
-const HIDDEN_RULES = new Set(["market_mid", "market_wide", "taiko_suji"]);
+// 記録をやめた買い方 (2026-11-25 まで、market_6_20 は 2026-11-26 まで)。サイトの記録から消した。古い JSON が残っていても表示・集計しない
+const HIDDEN_RULES = new Set(["market_mid", "market_wide", "taiko_suji", "market_6_20"]);
 // 表示名を変えた買い方 (過去の日の JSON の pick_rules も新しい名前で出す)。market_6_20 は 2026-11-25 まで「市場基準・6〜20番人気」
 const RULE_LABELS = { market_6_20: "市場基準・中穴" };
 const shownRules = (rules) => (rules || []).filter((x) => !HIDDEN_RULES.has(x.id))
@@ -721,8 +721,8 @@ function trifectaSection(r) {
   const std = tableOf(r.trifecta, (c) => badge(tokusen, "特選", "gold", c) + badge(honsen, "本線", "blue", c) + badge(picks, "picks", "", c));
   const note = `<div class="faint small">オッズは締切前に最後に取ったもの。期待値 = 確率 × オッズ。組み合わせの横の印はAIの買い目、◎ は的中、× は外れ。</div>`;
   if (!r.trifecta_market) return `<h2>3連単の上位10</h2>${std}${note}`;
-  const market = has("market"), m620 = has("market_6_20"), r1 = has("market_r1");
-  const mkt = tableOf(r.trifecta_market, (c) => badge(market, "市場基準", "", c) + badge(m620, "中穴", "blue", c) + badge(r1, "R1", "gold", c));
+  const market = has("market"), s30 = has("market_set30"), r1 = has("market_r1");
+  const mkt = tableOf(r.trifecta_market, (c) => badge(market, "市場基準", "", c) + badge(s30, "30%", "blue", c) + badge(r1, "R1", "gold", c));
   // 標準モデルと市場基準を切り替える (押すまで標準モデル)
   return `<h2>3連単の上位10</h2>
     <div class="segs tri-segs" role="group" aria-label="確率のモデル">
@@ -796,6 +796,7 @@ function picksSection(r, rules) {
         market_mid: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の買い目に11〜20番人気の組み合わせはありません。"],
         market_6_20: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準の買い目に6〜20番人気の組み合わせはありません。"],
         market_r1: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["なし", "市場基準とH1の両方で期待値1.0超の組み合わせはありません。"],
+        market_set30: noOdds ? ["オッズ待ち", "締切前のオッズを取ってから判定します。"] : ["見送り", "確率の合計を30%にしたときの期待値が1.0以下なので見送り。"],
       }[rule.id] || ["なし", "この条件に合う買い目はありません。"];
       body = `<p class="muted small">${why[1]}</p>`;
       head = `<span class="muted">${why[0]}</span>`;
